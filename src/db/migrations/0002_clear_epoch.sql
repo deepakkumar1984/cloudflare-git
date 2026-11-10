@@ -1,0 +1,1 @@
+ALTER TABLE "project_imports" ADD COLUMN "repository_private" boolean DEFAULT false NOT NULL;

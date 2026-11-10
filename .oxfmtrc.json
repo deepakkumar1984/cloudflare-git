@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 80,
+  "trailingComma": "es5",
+  "ignorePatterns": [
+    "worker-configuration.d.ts",
+    "dist/**",
+    "package-lock.json"
+  ]
+}

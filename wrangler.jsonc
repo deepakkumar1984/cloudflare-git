@@ -1,0 +1,63 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "deesha-git",
+  "main": "./src/worker/index.ts",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+  "vars": {
+    "APP_URL": "http://localhost:5173",
+    "ARTIFACTS_NAMESPACE": "deesha-git",
+    "ENVIRONMENT": "development",
+  },
+  "artifacts": [
+    {
+      "binding": "ARTIFACTS",
+      "namespace": "deesha-git",
+      "remote": true,
+    },
+  ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000",
+    },
+  ],
+  "workflows": [
+    {
+      "name": "deesha-git-push-sync",
+      "binding": "PUSH_SYNC",
+      "class_name": "PushSyncWorkflow",
+    },
+  ],
+  "triggers": {
+    "crons": ["*/10 * * * *"],
+    "events": [
+      {
+        "type": "cf.artifacts.repo.pushed",
+        "filter": {
+          "namespace": "deesha-git",
+        },
+        "targets": [
+          {
+            "type": "workflow",
+            "workflow_name": "deesha-git-push-sync",
+          },
+        ],
+      },
+    ],
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+  },
+}
