@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, lt } from "drizzle-orm";
+import { writeBatch } from "@db/batch";
 import type { Database } from "@db/client";
 import {
   gitCommits,
@@ -15,6 +16,7 @@ import {
 import {
   GIT_PROVIDER_LABELS,
   IMPORT_PROXY_TTL_SECONDS,
+  IMPORT_TOKEN_PREFIX,
   type GitProvider,
 } from "@shared/constants";
 import type { ArtifactsRepoInfo, GitStorage } from "@worker/artifacts";
@@ -146,9 +148,8 @@ async function createProxySession(
   repository: ProviderRepository,
   token: string
 ): Promise<string> {
-  const rawToken = `deesha_import_${base64Url(
-    crypto.getRandomValues(new Uint8Array(32))
-  )}`;
+  const rawToken =
+    IMPORT_TOKEN_PREFIX + base64Url(crypto.getRandomValues(new Uint8Array(32)));
   const tokenHash = await sha256Hex(rawToken);
   const encryptedToken = await encryptProviderToken(
     providerTokenSecret(env),
@@ -334,14 +335,12 @@ export async function finalizeProjectImport(
   const completedAt = new Date();
 
   if (replacing) {
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(gitSyncLeases)
-        .where(eq(gitSyncLeases.projectId, project.id));
-      await tx.delete(gitSyncRuns).where(eq(gitSyncRuns.projectId, project.id));
-      await tx.delete(gitRefs).where(eq(gitRefs.projectId, project.id));
-      await tx.delete(gitCommits).where(eq(gitCommits.projectId, project.id));
-      await tx
+    await writeBatch(db, [
+      db.delete(gitSyncLeases).where(eq(gitSyncLeases.projectId, project.id)),
+      db.delete(gitSyncRuns).where(eq(gitSyncRuns.projectId, project.id)),
+      db.delete(gitRefs).where(eq(gitRefs.projectId, project.id)),
+      db.delete(gitCommits).where(eq(gitCommits.projectId, project.id)),
+      db
         .update(mergeRequests)
         .set({ state: "closed", closedAt: completedAt, updatedAt: completedAt })
         .where(
@@ -349,8 +348,8 @@ export async function finalizeProjectImport(
             eq(mergeRequests.projectId, project.id),
             eq(mergeRequests.state, "opened")
           )
-        );
-      await tx
+        ),
+      db
         .update(projects)
         .set({
           artifactsRepoName: job.artifactsRepoName,
@@ -361,8 +360,8 @@ export async function finalizeProjectImport(
           lastSyncedAt: null,
           updatedAt: completedAt,
         })
-        .where(eq(projects.id, project.id));
-      await tx
+        .where(eq(projects.id, project.id)),
+      db
         .update(projectImports)
         .set({
           status: "ready",
@@ -370,11 +369,11 @@ export async function finalizeProjectImport(
           completedAt,
           updatedAt: completedAt,
         })
-        .where(eq(projectImports.id, job.id));
-    });
+        .where(eq(projectImports.id, job.id)),
+    ]);
   } else {
-    await db.transaction(async (tx) => {
-      await tx
+    await writeBatch(db, [
+      db
         .update(projects)
         .set({
           artifactsRemote: info.remote,
@@ -383,8 +382,8 @@ export async function finalizeProjectImport(
           provisioningError: null,
           updatedAt: completedAt,
         })
-        .where(eq(projects.id, project.id));
-      await tx
+        .where(eq(projects.id, project.id)),
+      db
         .update(projectImports)
         .set({
           status: "ready",
@@ -392,8 +391,8 @@ export async function finalizeProjectImport(
           completedAt,
           updatedAt: completedAt,
         })
-        .where(eq(projectImports.id, job.id));
-    });
+        .where(eq(projectImports.id, job.id)),
+    ]);
   }
 
   await db
@@ -483,7 +482,7 @@ async function beginImport(
       })
       .returning();
   } catch (error) {
-    if (isUniqueViolation(error, "project_imports_active_uq")) {
+    if (isUniqueViolation(error, "project_imports.project_id")) {
       throw conflict("An import is already running for this project");
     }
     throw error;

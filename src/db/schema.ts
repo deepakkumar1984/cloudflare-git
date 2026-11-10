@@ -1,45 +1,48 @@
 import { sql } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
-  boolean,
-  date,
   index,
   integer,
-  jsonb,
-  pgEnum,
-  pgTable,
   primaryKey,
+  sqliteTable,
   text,
-  timestamp,
   uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
+
+const timestampMs = (name: string) => integer(name, { mode: "timestamp_ms" });
 
 const now = () =>
-  timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
+  timestampMs("created_at")
+    .notNull()
+    .$defaultFn(() => new Date());
+
 const updated = () =>
-  timestamp("updated_at", { withTimezone: true }).defaultNow().notNull();
+  timestampMs("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date());
 
 const id = () =>
-  uuid("id")
+  text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID());
+
+const bool = (name: string) => integer(name, { mode: "boolean" });
 
 /* -------------------------------------------------------------------------- */
 /* Better Auth tables                                                         */
 /* -------------------------------------------------------------------------- */
 
-export const user = pgTable(
+export const user = sqliteTable(
   "user",
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     email: text("email").notNull(),
-    emailVerified: boolean("email_verified").default(false).notNull(),
+    emailVerified: bool("email_verified").notNull().default(false),
     image: text("image"),
     username: text("username"),
     displayUsername: text("display_username"),
-    isAdmin: boolean("is_admin").default(false).notNull(),
+    isAdmin: bool("is_admin").notNull().default(false),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -49,11 +52,11 @@ export const user = pgTable(
   ]
 );
 
-export const session = pgTable(
+export const session = sqliteTable(
   "session",
   {
     id: text("id").primaryKey(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    expiresAt: timestampMs("expires_at").notNull(),
     token: text("token").notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
@@ -69,7 +72,7 @@ export const session = pgTable(
   ]
 );
 
-export const account = pgTable(
+export const account = sqliteTable(
   "account",
   {
     id: text("id").primaryKey(),
@@ -81,12 +84,8 @@ export const account = pgTable(
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     idToken: text("id_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at", {
-      withTimezone: true,
-    }),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
-      withTimezone: true,
-    }),
+    accessTokenExpiresAt: timestampMs("access_token_expires_at"),
+    refreshTokenExpiresAt: timestampMs("refresh_token_expires_at"),
     scope: text("scope"),
     password: text("password"),
     createdAt: now(),
@@ -95,13 +94,13 @@ export const account = pgTable(
   (table) => [index("account_user_idx").on(table.userId)]
 );
 
-export const verification = pgTable(
+export const verification = sqliteTable(
   "verification",
   {
     id: text("id").primaryKey(),
     identifier: text("identifier").notNull(),
     value: text("value").notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    expiresAt: timestampMs("expires_at").notNull(),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -109,89 +108,96 @@ export const verification = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/* Enums                                                                      */
+/* Enum values (stored as text; SQLite has no native enums)                  */
 /* -------------------------------------------------------------------------- */
 
-export const memberRole = pgEnum("member_role", [
+export const memberRoleValues = [
   "guest",
   "reporter",
   "developer",
   "maintainer",
   "owner",
-]);
+] as const;
+export type MemberRole = (typeof memberRoleValues)[number];
 
-export const visibility = pgEnum("visibility", ["private", "internal"]);
+export const visibilityValues = ["private", "internal"] as const;
+export type Visibility = (typeof visibilityValues)[number];
 
-export const issueState = pgEnum("issue_state", ["opened", "closed"]);
+export const issueStateValues = ["opened", "closed"] as const;
+export type IssueState = (typeof issueStateValues)[number];
 
-export const mergeRequestState = pgEnum("merge_request_state", [
-  "opened",
-  "merged",
-  "closed",
-]);
+export const mergeRequestStateValues = ["opened", "merged", "closed"] as const;
+export type MergeRequestState = (typeof mergeRequestStateValues)[number];
 
-export const mergeDetection = pgEnum("merge_detection", [
+export const mergeDetectionValues = [
   "none",
   "fast_forward",
   "merge_commit",
   "heuristic",
   "manual",
-]);
+] as const;
+export type MergeDetection = (typeof mergeDetectionValues)[number];
 
-export const reviewerState = pgEnum("reviewer_state", [
+export const reviewerStateValues = [
   "pending",
   "approved",
   "changes_requested",
-]);
+] as const;
+export type ReviewerState = (typeof reviewerStateValues)[number];
 
-export const milestoneState = pgEnum("milestone_state", ["active", "closed"]);
+export const milestoneStateValues = ["active", "closed"] as const;
+export type MilestoneState = (typeof milestoneStateValues)[number];
 
-export const provisioningState = pgEnum("provisioning_state", [
-  "pending",
-  "ready",
-  "failed",
-]);
+export const provisioningStateValues = ["pending", "ready", "failed"] as const;
+export type ProvisioningState = (typeof provisioningStateValues)[number];
 
-export const noteableType = pgEnum("noteable_type", ["issue", "merge_request"]);
+export const noteableTypeValues = ["issue", "merge_request"] as const;
+export type NoteableType = (typeof noteableTypeValues)[number];
 
-export const gitRefType = pgEnum("git_ref_type", ["branch", "tag"]);
+export const gitRefTypeValues = ["branch", "tag"] as const;
+export type GitRefType = (typeof gitRefTypeValues)[number];
 
-export const syncStatus = pgEnum("sync_status", [
+export const syncStatusValues = [
   "running",
   "completed",
   "failed",
   "skipped",
-]);
+] as const;
+export type SyncStatus = (typeof syncStatusValues)[number];
 
-export const gitProvider = pgEnum("git_provider", ["github", "gitlab"]);
+export const gitProviderValues = ["github", "gitlab"] as const;
+export type GitProvider = (typeof gitProviderValues)[number];
 
-export const projectImportStatus = pgEnum("project_import_status", [
+export const projectImportStatusValues = [
   "pending",
   "importing",
   "ready",
   "failed",
-]);
+] as const;
+export type ProjectImportStatus = (typeof projectImportStatusValues)[number];
 
 /* -------------------------------------------------------------------------- */
 /* Groups and projects                                                        */
 /* -------------------------------------------------------------------------- */
 
-export const groups = pgTable(
+export const groups = sqliteTable(
   "groups",
   {
     id: id(),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
-    visibility: visibility("visibility").notNull().default("private"),
-    personal: boolean("personal").notNull().default(false),
-    parentId: uuid("parent_id").references((): AnyPgColumn => groups.id, {
+    visibility: text("visibility", { enum: visibilityValues })
+      .notNull()
+      .default("private"),
+    personal: bool("personal").notNull().default(false),
+    parentId: text("parent_id").references((): AnySQLiteColumn => groups.id, {
       onDelete: "set null",
     }),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedAt: timestampMs("archived_at"),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -201,17 +207,17 @@ export const groups = pgTable(
   ]
 );
 
-export const groupMembers = pgTable(
+export const groupMembers = sqliteTable(
   "group_members",
   {
     id: id(),
-    groupId: uuid("group_id")
+    groupId: text("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    role: memberRole("role").notNull(),
+    role: text("role", { enum: memberRoleValues }).notNull(),
     createdAt: now(),
   },
   (table) => [
@@ -220,30 +226,34 @@ export const groupMembers = pgTable(
   ]
 );
 
-export const projects = pgTable(
+export const projects = sqliteTable(
   "projects",
   {
     id: id(),
-    groupId: uuid("group_id")
+    groupId: text("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
-    visibility: visibility("visibility").notNull().default("private"),
+    visibility: text("visibility", { enum: visibilityValues })
+      .notNull()
+      .default("private"),
     defaultBranch: text("default_branch").notNull().default("main"),
     artifactsNamespace: text("artifacts_namespace").notNull(),
     artifactsRepoName: text("artifacts_repo_name").notNull(),
     artifactsRemote: text("artifacts_remote"),
-    provisioningState: provisioningState("provisioning_state")
+    provisioningState: text("provisioning_state", {
+      enum: provisioningStateValues,
+    })
       .notNull()
       .default("pending"),
     provisioningError: text("provisioning_error"),
-    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    lastSyncedAt: timestampMs("last_synced_at"),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedAt: timestampMs("archived_at"),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -254,17 +264,17 @@ export const projects = pgTable(
   ]
 );
 
-export const projectMembers = pgTable(
+export const projectMembers = sqliteTable(
   "project_members",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    role: memberRole("role").notNull(),
+    role: text("role", { enum: memberRoleValues }).notNull(),
     createdAt: now(),
   },
   (table) => [
@@ -276,8 +286,8 @@ export const projectMembers = pgTable(
   ]
 );
 
-export const projectCounters = pgTable("project_counters", {
-  projectId: uuid("project_id")
+export const projectCounters = sqliteTable("project_counters", {
+  projectId: text("project_id")
     .primaryKey()
     .references(() => projects.id, { onDelete: "cascade" }),
   nextIid: integer("next_iid").notNull().default(1),
@@ -287,14 +297,14 @@ export const projectCounters = pgTable("project_counters", {
 /* Provider connections and repository imports                                */
 /* -------------------------------------------------------------------------- */
 
-export const providerConnections = pgTable(
+export const providerConnections = sqliteTable(
   "provider_connections",
   {
     id: id(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    provider: gitProvider("provider").notNull(),
+    provider: text("provider", { enum: gitProviderValues }).notNull(),
     encryptedToken: text("encrypted_token").notNull(),
     externalUserId: text("external_user_id").notNull(),
     externalUsername: text("external_username").notNull(),
@@ -311,29 +321,31 @@ export const providerConnections = pgTable(
   ]
 );
 
-export const projectImports = pgTable(
+export const projectImports = sqliteTable(
   "project_imports",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
-    provider: gitProvider("provider").notNull(),
+    provider: text("provider", { enum: gitProviderValues }).notNull(),
     externalRepo: text("external_repo").notNull(),
     externalRepoId: text("external_repo_id"),
     remoteUrl: text("remote_url").notNull(),
-    repositoryPrivate: boolean("repository_private").notNull().default(false),
+    repositoryPrivate: bool("repository_private").notNull().default(false),
     branch: text("branch"),
     depth: integer("depth"),
-    status: projectImportStatus("status").notNull().default("pending"),
+    status: text("status", { enum: projectImportStatusValues })
+      .notNull()
+      .default("pending"),
     artifactsRepoName: text("artifacts_repo_name").notNull(),
     previousRepoName: text("previous_repo_name"),
     error: text("error"),
     requestedBy: text("requested_by").references(() => user.id, {
       onDelete: "set null",
     }),
-    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
-    completedAt: timestamp("completed_at", { withTimezone: true }),
+    lastCheckedAt: timestampMs("last_checked_at"),
+    completedAt: timestampMs("completed_at"),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -348,20 +360,20 @@ export const projectImports = pgTable(
   ]
 );
 
-export const importProxySessions = pgTable(
+export const importProxySessions = sqliteTable(
   "import_proxy_sessions",
   {
     id: id(),
     tokenHash: text("token_hash").notNull(),
-    projectImportId: uuid("project_import_id")
+    projectImportId: text("project_import_id")
       .notNull()
       .references(() => projectImports.id, { onDelete: "cascade" }),
-    provider: gitProvider("provider").notNull(),
+    provider: text("provider", { enum: gitProviderValues }).notNull(),
     externalRepo: text("external_repo").notNull(),
     gitBaseUrl: text("git_base_url").notNull(),
     encryptedToken: text("encrypted_token").notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    expiresAt: timestampMs("expires_at").notNull(),
+    revokedAt: timestampMs("revoked_at"),
     createdAt: now(),
   },
   (table) => [
@@ -371,14 +383,14 @@ export const importProxySessions = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/* Work items                                                                */
+/* Work items                                                                 */
 /* -------------------------------------------------------------------------- */
 
-export const labels = pgTable(
+export const labels = sqliteTable(
   "labels",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
@@ -392,17 +404,19 @@ export const labels = pgTable(
   ]
 );
 
-export const milestones = pgTable(
+export const milestones = sqliteTable(
   "milestones",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
-    dueDate: date("due_date"),
-    state: milestoneState("state").notNull().default("active"),
+    dueDate: text("due_date"),
+    state: text("state", { enum: milestoneStateValues })
+      .notNull()
+      .default("active"),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -412,27 +426,29 @@ export const milestones = pgTable(
   ]
 );
 
-export const issues = pgTable(
+export const issues = sqliteTable(
   "issues",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     iid: integer("iid").notNull(),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
-    state: issueState("state").notNull().default("opened"),
+    state: text("state", { enum: issueStateValues })
+      .notNull()
+      .default("opened"),
     authorId: text("author_id")
       .notNull()
       .references(() => user.id),
-    milestoneId: uuid("milestone_id").references(() => milestones.id, {
+    milestoneId: text("milestone_id").references(() => milestones.id, {
       onDelete: "set null",
     }),
-    dueDate: date("due_date"),
-    confidential: boolean("confidential").notNull().default(false),
+    dueDate: text("due_date"),
+    confidential: bool("confidential").notNull().default(false),
     closedById: text("closed_by_id").references(() => user.id),
-    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedAt: timestampMs("closed_at"),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -443,10 +459,10 @@ export const issues = pgTable(
   ]
 );
 
-export const issueAssignees = pgTable(
+export const issueAssignees = sqliteTable(
   "issue_assignees",
   {
-    issueId: uuid("issue_id")
+    issueId: text("issue_id")
       .notNull()
       .references(() => issues.id, { onDelete: "cascade" }),
     userId: text("user_id")
@@ -459,13 +475,13 @@ export const issueAssignees = pgTable(
   ]
 );
 
-export const issueLabels = pgTable(
+export const issueLabels = sqliteTable(
   "issue_labels",
   {
-    issueId: uuid("issue_id")
+    issueId: text("issue_id")
       .notNull()
       .references(() => issues.id, { onDelete: "cascade" }),
-    labelId: uuid("label_id")
+    labelId: text("label_id")
       .notNull()
       .references(() => labels.id, { onDelete: "cascade" }),
   },
@@ -475,19 +491,19 @@ export const issueLabels = pgTable(
   ]
 );
 
-export const discussions = pgTable(
+export const discussions = sqliteTable(
   "discussions",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
-    noteableType: noteableType("noteable_type").notNull(),
-    noteableId: uuid("noteable_id").notNull(),
-    resolvable: boolean("resolvable").notNull().default(false),
-    resolved: boolean("resolved").notNull().default(false),
+    noteableType: text("noteable_type", { enum: noteableTypeValues }).notNull(),
+    noteableId: text("noteable_id").notNull(),
+    resolvable: bool("resolvable").notNull().default(false),
+    resolved: bool("resolved").notNull().default(false),
     resolvedById: text("resolved_by_id").references(() => user.id),
-    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedAt: timestampMs("resolved_at"),
     createdAt: now(),
   },
   (table) => [
@@ -495,21 +511,21 @@ export const discussions = pgTable(
   ]
 );
 
-export const notes = pgTable(
+export const notes = sqliteTable(
   "notes",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
-    discussionId: uuid("discussion_id").references(() => discussions.id, {
+    discussionId: text("discussion_id").references(() => discussions.id, {
       onDelete: "cascade",
     }),
-    noteableType: noteableType("noteable_type").notNull(),
-    noteableId: uuid("noteable_id").notNull(),
+    noteableType: text("noteable_type", { enum: noteableTypeValues }).notNull(),
+    noteableId: text("noteable_id").notNull(),
     authorId: text("author_id").references(() => user.id),
     body: text("body").notNull(),
-    system: boolean("system").notNull().default(false),
+    system: bool("system").notNull().default(false),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -519,35 +535,39 @@ export const notes = pgTable(
   ]
 );
 
-export const mergeRequests = pgTable(
+export const mergeRequests = sqliteTable(
   "merge_requests",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     iid: integer("iid").notNull(),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
-    state: mergeRequestState("state").notNull().default("opened"),
+    state: text("state", { enum: mergeRequestStateValues })
+      .notNull()
+      .default("opened"),
     sourceBranch: text("source_branch").notNull(),
     targetBranch: text("target_branch").notNull(),
     baseSha: text("base_sha"),
     headSha: text("head_sha"),
     targetSha: text("target_sha"),
     mergeCommitSha: text("merge_commit_sha"),
-    mergeDetection: mergeDetection("merge_detection").notNull().default("none"),
-    draft: boolean("draft").notNull().default(false),
+    mergeDetection: text("merge_detection", { enum: mergeDetectionValues })
+      .notNull()
+      .default("none"),
+    draft: bool("draft").notNull().default(false),
     authorId: text("author_id")
       .notNull()
       .references(() => user.id),
-    milestoneId: uuid("milestone_id").references(() => milestones.id, {
+    milestoneId: text("milestone_id").references(() => milestones.id, {
       onDelete: "set null",
     }),
     mergedById: text("merged_by_id").references(() => user.id),
-    mergedAt: timestamp("merged_at", { withTimezone: true }),
+    mergedAt: timestampMs("merged_at"),
     closedById: text("closed_by_id").references(() => user.id),
-    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedAt: timestampMs("closed_at"),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -559,10 +579,10 @@ export const mergeRequests = pgTable(
   ]
 );
 
-export const mergeRequestAssignees = pgTable(
+export const mergeRequestAssignees = sqliteTable(
   "merge_request_assignees",
   {
-    mergeRequestId: uuid("merge_request_id")
+    mergeRequestId: text("merge_request_id")
       .notNull()
       .references(() => mergeRequests.id, { onDelete: "cascade" }),
     userId: text("user_id")
@@ -572,19 +592,21 @@ export const mergeRequestAssignees = pgTable(
   (table) => [primaryKey({ columns: [table.mergeRequestId, table.userId] })]
 );
 
-export const mergeRequestReviewers = pgTable(
+export const mergeRequestReviewers = sqliteTable(
   "merge_request_reviewers",
   {
-    mergeRequestId: uuid("merge_request_id")
+    mergeRequestId: text("merge_request_id")
       .notNull()
       .references(() => mergeRequests.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    state: reviewerState("state").notNull().default("pending"),
+    state: text("state", { enum: reviewerStateValues })
+      .notNull()
+      .default("pending"),
     requestedById: text("requested_by_id").references(() => user.id),
     requestedAt: now(),
-    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedAt: timestampMs("reviewed_at"),
   },
   (table) => [
     primaryKey({ columns: [table.mergeRequestId, table.userId] }),
@@ -592,11 +614,11 @@ export const mergeRequestReviewers = pgTable(
   ]
 );
 
-export const mergeRequestApprovals = pgTable(
+export const mergeRequestApprovals = sqliteTable(
   "merge_request_approvals",
   {
     id: id(),
-    mergeRequestId: uuid("merge_request_id")
+    mergeRequestId: text("merge_request_id")
       .notNull()
       .references(() => mergeRequests.id, { onDelete: "cascade" }),
     userId: text("user_id")
@@ -614,11 +636,11 @@ export const mergeRequestApprovals = pgTable(
   ]
 );
 
-export const boards = pgTable(
+export const boards = sqliteTable(
   "boards",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull().default("Board"),
@@ -627,14 +649,14 @@ export const boards = pgTable(
   (table) => [uniqueIndex("boards_project_uq").on(table.projectId)]
 );
 
-export const boardLists = pgTable(
+export const boardLists = sqliteTable(
   "board_lists",
   {
     id: id(),
-    boardId: uuid("board_id")
+    boardId: text("board_id")
       .notNull()
       .references(() => boards.id, { onDelete: "cascade" }),
-    labelId: uuid("label_id")
+    labelId: text("label_id")
       .notNull()
       .references(() => labels.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
@@ -653,14 +675,14 @@ export const boardLists = pgTable(
 /* Activity and audit                                                         */
 /* -------------------------------------------------------------------------- */
 
-export const events = pgTable(
+export const events = sqliteTable(
   "events",
   {
     id: id(),
-    projectId: uuid("project_id").references(() => projects.id, {
+    projectId: text("project_id").references(() => projects.id, {
       onDelete: "cascade",
     }),
-    groupId: uuid("group_id").references(() => groups.id, {
+    groupId: text("group_id").references(() => groups.id, {
       onDelete: "cascade",
     }),
     actorId: text("actor_id").references(() => user.id),
@@ -668,7 +690,7 @@ export const events = pgTable(
     targetType: text("target_type"),
     targetId: text("target_id"),
     targetIid: integer("target_iid"),
-    metadata: jsonb("metadata")
+    metadata: text("metadata", { mode: "json" })
       .$type<Record<string, unknown>>()
       .notNull()
       .default({}),
@@ -683,19 +705,19 @@ export const events = pgTable(
   ]
 );
 
-export const auditEvents = pgTable(
+export const auditEvents = sqliteTable(
   "audit_events",
   {
     id: id(),
     actorId: text("actor_id").references(() => user.id),
-    projectId: uuid("project_id").references(() => projects.id, {
+    projectId: text("project_id").references(() => projects.id, {
       onDelete: "cascade",
     }),
-    groupId: uuid("group_id").references(() => groups.id, {
+    groupId: text("group_id").references(() => groups.id, {
       onDelete: "cascade",
     }),
     action: text("action").notNull(),
-    detail: jsonb("detail")
+    detail: text("detail", { mode: "json" })
       .$type<Record<string, unknown>>()
       .notNull()
       .default({}),
@@ -715,18 +737,18 @@ export const auditEvents = pgTable(
 /* Git projection                                                             */
 /* -------------------------------------------------------------------------- */
 
-export const gitRefs = pgTable(
+export const gitRefs = sqliteTable(
   "git_refs",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     refName: text("ref_name").notNull(),
-    refType: gitRefType("ref_type").notNull(),
+    refType: text("ref_type", { enum: gitRefTypeValues }).notNull(),
     sha: text("sha").notNull(),
-    lastEventAt: timestamp("last_event_at", { withTimezone: true }),
-    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    lastEventAt: timestampMs("last_event_at"),
+    deletedAt: timestampMs("deleted_at"),
     createdAt: now(),
     updatedAt: updated(),
   },
@@ -736,10 +758,10 @@ export const gitRefs = pgTable(
   ]
 );
 
-export const gitCommits = pgTable(
+export const gitCommits = sqliteTable(
   "git_commits",
   {
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     sha: text("sha").notNull(),
@@ -749,9 +771,12 @@ export const gitCommits = pgTable(
     authorEmail: text("author_email").notNull(),
     committerName: text("committer_name").notNull(),
     committerEmail: text("committer_email").notNull(),
-    authoredAt: timestamp("authored_at", { withTimezone: true }).notNull(),
-    committedAt: timestamp("committed_at", { withTimezone: true }).notNull(),
-    parents: text("parents").array().notNull().default([]),
+    authoredAt: timestampMs("authored_at").notNull(),
+    committedAt: timestampMs("committed_at").notNull(),
+    parents: text("parents", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     createdAt: now(),
   },
   (table) => [
@@ -763,17 +788,19 @@ export const gitCommits = pgTable(
   ]
 );
 
-export const gitSyncRuns = pgTable(
+export const gitSyncRuns = sqliteTable(
   "git_sync_runs",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     refName: text("ref_name").notNull(),
     beforeSha: text("before_sha"),
     afterSha: text("after_sha").notNull(),
-    status: syncStatus("status").notNull().default("running"),
+    status: text("status", { enum: syncStatusValues })
+      .notNull()
+      .default("running"),
     error: text("error"),
     workflowId: text("workflow_id"),
     createdAt: now(),
@@ -791,19 +818,19 @@ export const gitSyncRuns = pgTable(
   ]
 );
 
-export const gitSyncLeases = pgTable("git_sync_leases", {
-  projectId: uuid("project_id")
+export const gitSyncLeases = sqliteTable("git_sync_leases", {
+  projectId: text("project_id")
     .primaryKey()
     .references(() => projects.id, { onDelete: "cascade" }),
   holder: text("holder").notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  expiresAt: timestampMs("expires_at").notNull(),
 });
 
-export const gitTokenGrants = pgTable(
+export const gitTokenGrants = sqliteTable(
   "git_token_grants",
   {
     id: id(),
-    projectId: uuid("project_id")
+    projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     userId: text("user_id")
@@ -811,8 +838,8 @@ export const gitTokenGrants = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     artifactsTokenId: text("artifacts_token_id").notNull(),
     scope: text("scope").notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    expiresAt: timestampMs("expires_at").notNull(),
+    revokedAt: timestampMs("revoked_at"),
     createdAt: now(),
   },
   (table) => [

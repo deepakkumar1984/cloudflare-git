@@ -74,7 +74,7 @@ export async function createProject(
       name: input.name ?? "Test Project",
       visibility: input.visibility ?? "private",
       defaultBranch: input.defaultBranch ?? "main",
-      artifactsNamespace: "deesha-git",
+      artifactsNamespace: "cloudflare-git",
       artifactsRepoName: `p-${suffix}`,
       provisioningState: "ready",
       createdBy: input.creatorId,

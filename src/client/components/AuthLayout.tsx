@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useAppName } from "@/lib/meta";
 
 export function AuthLayout({
   children,
@@ -16,6 +17,7 @@ export function AuthLayout({
   title: string;
   subtitle: string;
 }) {
+  const appName = useAppName();
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[1.05fr_0.95fr]">
       <aside className="relative hidden overflow-hidden bg-[#1b1712] p-10 text-[#f4eee4] lg:flex lg:flex-col">
@@ -38,10 +40,7 @@ export function AuthLayout({
         <Link to="/" className="relative flex items-center gap-2.5">
           <img src="/mark.svg" alt="" className="size-9 rounded-[10px]" />
           <span className="font-display text-2xl font-semibold tracking-[-0.03em]">
-            Deesha
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#b8ab9b]">
-            git
+            {appName}
           </span>
         </Link>
 
@@ -83,7 +82,7 @@ export function AuthLayout({
         </div>
 
         <p className="relative font-mono text-[10px] uppercase tracking-[0.16em] text-[#81766a]">
-          Built on Cloudflare Workers · Artifacts · Hyperdrive
+          Built on Cloudflare Workers · Artifacts · D1
         </p>
       </aside>
 
@@ -92,10 +91,7 @@ export function AuthLayout({
           <div className="mb-10 flex items-center gap-2.5 lg:hidden">
             <img src="/mark.svg" alt="" className="size-9 rounded-[10px]" />
             <span className="font-display text-2xl font-semibold tracking-[-0.03em]">
-              Deesha
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
-              git
+              {appName}
             </span>
           </div>
 

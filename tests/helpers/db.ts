@@ -1,61 +1,111 @@
-import { config } from "dotenv";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { createDatabase, type DatabaseHandle } from "@db/client";
-
-config({ path: ".dev.vars" });
+import { readdirSync, readFileSync } from "node:fs";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
+import { createDatabase, type Database } from "@db/client";
 
 /**
- * The application uses the managed database for local development and
- * production. Tests must never truncate that database, so they always run
- * against the isolated Docker Postgres on port 55433.
+ * Integration tests use an in-memory Miniflare D1 database. They must never
+ * open the production D1 database or the managed Postgres database.
  */
-export const testDatabaseUrl =
-  process.env.TEST_DATABASE_URL ??
-  "postgres://postgres:postgres@127.0.0.1:55433/deesha_git_test";
+const DELETE_ORDER = [
+  "git_token_grants",
+  "git_sync_leases",
+  "git_sync_runs",
+  "git_commits",
+  "git_refs",
+  "audit_events",
+  "events",
+  "board_lists",
+  "boards",
+  "merge_request_approvals",
+  "merge_request_reviewers",
+  "merge_request_assignees",
+  "merge_requests",
+  "notes",
+  "discussions",
+  "issue_labels",
+  "issue_assignees",
+  "issues",
+  "milestones",
+  "labels",
+  "import_proxy_sessions",
+  "project_imports",
+  "provider_connections",
+  "project_counters",
+  "project_members",
+  "projects",
+  "group_members",
+  "groups",
+  "verification",
+  "account",
+  "session",
+  "user",
+] as const;
 
-function assertSafeTestUrl(value: string): void {
-  const parsed = new URL(value);
-  const localHost =
-    parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost";
-  const testPort = parsed.port === "55433";
-  const testName = parsed.pathname.replace(/^\//, "").endsWith("_test");
-  if (!localHost || !testPort || !testName) {
-    throw new Error(
-      "Refusing to use TEST_DATABASE_URL: expected a localhost:55433 database whose name ends with _test"
-    );
+let miniflare: Miniflare | null = null;
+let cached: { db: Database; d1: D1Database } | null = null;
+
+async function applyMigrations(d1: D1Database): Promise<void> {
+  await d1
+    .prepare(
+      "CREATE TABLE IF NOT EXISTS d1_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL DEFAULT (datetime('now')))"
+    )
+    .run();
+  const applied = await d1.prepare("SELECT name FROM d1_migrations").all<{
+    name: string;
+  }>();
+  const have = new Set((applied.results ?? []).map((row) => row.name));
+  const files = readdirSync("./src/db/migrations")
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
+  for (const name of files) {
+    if (have.has(name)) continue;
+    const sqlText = readFileSync(`./src/db/migrations/${name}`, "utf8");
+    const statements = sqlText
+      .split("--> statement-breakpoint")
+      .map((statement) => statement.trim())
+      .filter(Boolean);
+    if (statements.length === 0) continue;
+    await d1.batch(statements.map((statement) => d1.prepare(statement)));
+    await d1
+      .prepare("INSERT INTO d1_migrations (name) VALUES (?)")
+      .bind(name)
+      .run();
   }
 }
 
-export const testDbAvailable = true;
-
-let handle: DatabaseHandle | null = null;
-
-export async function getTestDatabase(): Promise<DatabaseHandle> {
-  if (handle) return handle;
-  assertSafeTestUrl(testDatabaseUrl);
-  const created = createDatabase(testDatabaseUrl);
-  await migrate(created.db, { migrationsFolder: "./src/db/migrations" });
-  handle = created;
-  return created;
+export async function getTestDatabase(): Promise<{
+  db: Database;
+  d1: D1Database;
+}> {
+  if (cached) return cached;
+  miniflare = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      script:
+        "export default { async fetch() { return new Response(null, { status: 404 }); } };",
+      d1Databases: { DB: "cloudflare-git-test" },
+      compatibilityDate: "2026-11-10",
+      compatibilityFlags: ["nodejs_compat"],
+    })
+  );
+  const d1 = await miniflare.getD1Database("DB");
+  await applyMigrations(d1);
+  cached = { db: createDatabase(d1), d1 };
+  return cached;
 }
 
 export async function resetDatabase(): Promise<void> {
-  const { sql } = await getTestDatabase();
-  const tables = await sql<{ tablename: string }[]>`
-    select tablename
-    from pg_tables
-    where schemaname = 'public' and tablename <> '__drizzle_migrations'
-  `;
-  if (tables.length === 0) return;
-  const list = tables
-    .map((row) => `"${row.tablename.replaceAll('"', '""')}"`)
-    .join(", ");
-  await sql.unsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
+  const { d1 } = await getTestDatabase();
+  await d1.exec("PRAGMA foreign_keys = OFF");
+  await d1.batch(
+    DELETE_ORDER.map((table) => d1.prepare(`DELETE FROM ${table}`))
+  );
+  await d1.exec("PRAGMA foreign_keys = ON");
 }
 
 export async function closeTestDatabase(): Promise<void> {
-  if (!handle) return;
-  const current = handle;
-  handle = null;
-  await current.close();
+  cached = null;
+  const current = miniflare;
+  miniflare = null;
+  await current?.dispose();
 }

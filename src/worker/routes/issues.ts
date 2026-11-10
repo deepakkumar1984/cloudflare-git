@@ -4,8 +4,8 @@ import {
   count,
   desc,
   eq,
-  ilike,
   inArray,
+  like,
   or,
   type SQL,
 } from "drizzle-orm";
@@ -23,6 +23,8 @@ import {
   user,
   type Issue,
 } from "@db/schema";
+import { writeBatch } from "@db/batch";
+import { likeContains } from "@shared/like";
 import {
   canComment,
   canDeleteNote,
@@ -60,7 +62,7 @@ export const issueRoutes = new Hono<AppEnv>();
 
 const issueListQuery = paginationSchema.extend({
   state: z.enum(["opened", "closed", "all"]).default("opened"),
-  q: z.string().trim().max(200).optional(),
+  q: z.string().trim().max(200).optional(), // truncated to 48 bytes before LIKE
   label: z.string().uuid().optional(),
   assignee: userIdSchema.optional(),
   milestone: z.string().uuid().optional(),
@@ -301,11 +303,9 @@ issueRoutes.get(
       conditions.push(eq(issues.confidential, false));
     }
     if (query.q) {
+      const pattern = likeContains(query.q);
       conditions.push(
-        or(
-          ilike(issues.title, `%${query.q}%`),
-          ilike(issues.description, `%${query.q}%`)
-        )!
+        or(like(issues.title, pattern), like(issues.description, pattern))!
       );
     }
     if (query.label) {
@@ -412,11 +412,20 @@ issueRoutes.post(
     const db = c.get("db");
     await validateIssueRelations(db, project, input);
 
-    const issue = await db.transaction(async (tx) => {
-      const iid = await allocateIid(tx, project.id);
-      const [created] = await tx
+    const assignees = [...new Set(input.assigneeIds ?? [])];
+    const labelIds = new Set(input.labelIds ?? []);
+    const boardLabelSet = new Set(await boardLabelIds(db, project.id));
+    if (![...labelIds].some((labelId) => boardLabelSet.has(labelId))) {
+      const defaultLabel = await defaultBoardLabelId(db, project.id);
+      if (defaultLabel) labelIds.add(defaultLabel);
+    }
+    const iid = await allocateIid(db, project.id);
+    const issueId = crypto.randomUUID();
+    const [createdRows] = await writeBatch(db, [
+      db
         .insert(issues)
         .values({
+          id: issueId,
           projectId: project.id,
           iid,
           title: input.title,
@@ -426,32 +435,24 @@ issueRoutes.post(
           dueDate: input.dueDate ?? null,
           confidential: input.confidential,
         })
-        .returning();
-      if (!created) throw new Error("Could not create issue");
-
-      const assignees = [...new Set(input.assigneeIds ?? [])];
-      if (assignees.length > 0) {
-        await tx
-          .insert(issueAssignees)
-          .values(assignees.map((userId) => ({ issueId: created.id, userId })));
-      }
-
-      const labelIds = new Set(input.labelIds ?? []);
-      const boardLabelSet = new Set(await boardLabelIds(db, project.id));
-      if (![...labelIds].some((labelId) => boardLabelSet.has(labelId))) {
-        const defaultLabel = await defaultBoardLabelId(db, project.id);
-        if (defaultLabel) labelIds.add(defaultLabel);
-      }
-      if (labelIds.size > 0) {
-        await tx.insert(issueLabels).values(
-          [...labelIds].map((labelId) => ({
-            issueId: created.id,
-            labelId,
-          }))
-        );
-      }
-      return created;
-    });
+        .returning(),
+      ...(assignees.length > 0
+        ? [
+            db
+              .insert(issueAssignees)
+              .values(assignees.map((userId) => ({ issueId, userId }))),
+          ]
+        : []),
+      ...(labelIds.size > 0
+        ? [
+            db
+              .insert(issueLabels)
+              .values([...labelIds].map((labelId) => ({ issueId, labelId }))),
+          ]
+        : []),
+    ]);
+    const issue = (createdRows as Issue[])[0];
+    if (!issue) throw new Error("Could not create issue");
 
     await recordEvent(db, {
       projectId: project.id,
@@ -513,8 +514,12 @@ issueRoutes.patch(
     const db = c.get("db");
     await validateIssueRelations(db, project, input);
 
-    await db.transaction(async (tx) => {
-      await tx
+    const assigneeIds = input.assigneeIds
+      ? [...new Set(input.assigneeIds)]
+      : null;
+    const labelIds = input.labelIds ? [...new Set(input.labelIds)] : null;
+    await writeBatch(db, [
+      db
         .update(issues)
         .set({
           ...(input.title === undefined ? {} : { title: input.title }),
@@ -530,31 +535,40 @@ issueRoutes.patch(
             : { confidential: input.confidential }),
           updatedAt: new Date(),
         })
-        .where(eq(issues.id, row.issue.id));
-
-      if (input.assigneeIds) {
-        await tx
-          .delete(issueAssignees)
-          .where(eq(issueAssignees.issueId, row.issue.id));
-        const ids = [...new Set(input.assigneeIds)];
-        if (ids.length > 0) {
-          await tx
-            .insert(issueAssignees)
-            .values(ids.map((userId) => ({ issueId: row.issue.id, userId })));
-        }
-      }
-      if (input.labelIds) {
-        await tx
-          .delete(issueLabels)
-          .where(eq(issueLabels.issueId, row.issue.id));
-        const ids = [...new Set(input.labelIds)];
-        if (ids.length > 0) {
-          await tx
-            .insert(issueLabels)
-            .values(ids.map((labelId) => ({ issueId: row.issue.id, labelId })));
-        }
-      }
-    });
+        .where(eq(issues.id, row.issue.id)),
+      ...(assigneeIds
+        ? [
+            db
+              .delete(issueAssignees)
+              .where(eq(issueAssignees.issueId, row.issue.id)),
+            ...(assigneeIds.length > 0
+              ? [
+                  db.insert(issueAssignees).values(
+                    assigneeIds.map((userId) => ({
+                      issueId: row.issue.id,
+                      userId,
+                    }))
+                  ),
+                ]
+              : []),
+          ]
+        : []),
+      ...(labelIds
+        ? [
+            db.delete(issueLabels).where(eq(issueLabels.issueId, row.issue.id)),
+            ...(labelIds.length > 0
+              ? [
+                  db.insert(issueLabels).values(
+                    labelIds.map((labelId) => ({
+                      issueId: row.issue.id,
+                      labelId,
+                    }))
+                  ),
+                ]
+              : []),
+          ]
+        : []),
+    ]);
 
     await recordEvent(db, {
       projectId: project.id,
@@ -675,26 +689,28 @@ issueRoutes.post(
     if (!list) throw badRequest("Board list does not belong to this project");
     const boardLabels = await boardLabelIds(db, project.id);
 
-    await db.transaction(async (tx) => {
-      if (boardLabels.length > 0) {
-        await tx
-          .delete(issueLabels)
-          .where(
-            and(
-              eq(issueLabels.issueId, row.issue.id),
-              inArray(issueLabels.labelId, boardLabels)
-            )
-          );
-      }
-      await tx
+    await writeBatch(db, [
+      ...(boardLabels.length > 0
+        ? [
+            db
+              .delete(issueLabels)
+              .where(
+                and(
+                  eq(issueLabels.issueId, row.issue.id),
+                  inArray(issueLabels.labelId, boardLabels)
+                )
+              ),
+          ]
+        : []),
+      db
         .insert(issueLabels)
         .values({ issueId: row.issue.id, labelId: list.labelId })
-        .onConflictDoNothing();
-      await tx
+        .onConflictDoNothing(),
+      db
         .update(issues)
         .set({ updatedAt: new Date() })
-        .where(eq(issues.id, row.issue.id));
-    });
+        .where(eq(issues.id, row.issue.id)),
+    ]);
 
     await recordEvent(db, {
       projectId: project.id,

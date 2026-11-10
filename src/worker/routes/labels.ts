@@ -66,7 +66,7 @@ labelRoutes.post(
         .returning();
       return c.json({ label: { ...label, openIssues: 0 } }, 201);
     } catch (error) {
-      if (isUniqueViolation(error, "labels_project_title_uq")) {
+      if (isUniqueViolation(error, "labels.project_id, labels.title")) {
         throw conflict("A label with that name already exists");
       }
       throw error;
@@ -101,7 +101,7 @@ labelRoutes.patch(
       if (!label) throw notFound("Label not found");
       return c.json({ label });
     } catch (error) {
-      if (isUniqueViolation(error, "labels_project_title_uq")) {
+      if (isUniqueViolation(error, "labels.project_id, labels.title")) {
         throw conflict("A label with that name already exists");
       }
       throw error;

@@ -1,5 +1,6 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { THEME_STORAGE_KEY } from "@shared/constants";
 import { Button } from "./ui/button";
 
 type Theme = "light" | "dark";
@@ -18,7 +19,7 @@ export function ThemeToggle() {
   function toggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     document.documentElement.classList.toggle("dark", next === "dark");
-    localStorage.setItem("deesha-theme", next);
+    localStorage.setItem(THEME_STORAGE_KEY, next);
     setTheme(next);
   }
 

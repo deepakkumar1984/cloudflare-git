@@ -1,5 +1,11 @@
 import { spawn } from "node:child_process";
-import { chmodSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { parse } from "dotenv";
 
 // Playwright must never talk to the real Artifacts service or reuse the
@@ -7,6 +13,10 @@ import { parse } from "dotenv";
 // selected environment, so create `.dev.vars.e2e` for this run and select it
 // with CLOUDFLARE_ENV. The file is derived from `.dev.vars` and removed when
 // the server stops.
+if (!existsSync("wrangler.jsonc")) {
+  throw new Error("Missing wrangler.jsonc. Run npm run setup.");
+}
+
 const devVarsPath = ".dev.vars";
 const e2eVarsPath = ".dev.vars.e2e";
 
@@ -19,19 +29,13 @@ try {
   );
 }
 
-const overrides = {
-  DATABASE_URL: process.env.DATABASE_URL,
-  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-};
 const vars: Record<string, string> = {
   ...localVars,
   ARTIFACTS_FAKE: "true",
 };
-for (const [key, value] of Object.entries(overrides)) {
-  if (value) vars[key] = value;
-}
-if (!vars.DATABASE_URL) {
-  throw new Error("DATABASE_URL is required to run the E2E server");
+delete vars.DATABASE_URL;
+if (process.env.BETTER_AUTH_URL) {
+  vars.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL;
 }
 
 const contents = Object.entries(vars)
@@ -67,10 +71,6 @@ const child = spawn("npx", ["vite", "dev", ...process.argv.slice(2)], {
     // server so the two processes cannot corrupt each other's cache.
     VITE_E2E: "1",
     CLOUDFLARE_ENV: "e2e",
-    CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
-      process.env.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE ??
-      vars.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE ??
-      vars.DATABASE_URL,
   },
 });
 

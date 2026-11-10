@@ -35,25 +35,48 @@ export function conflict(message: string): AppError {
   return new AppError(409, "CONFLICT", message);
 }
 
+const UNIQUE_TARGETS: Record<string, string> = {
+  groups_slug_uq: "groups.slug",
+  projects_group_slug_uq: "projects.group_id, projects.slug",
+  group_members_group_user_uq: "group_members.group_id, group_members.user_id",
+  project_members_project_user_uq:
+    "project_members.project_id, project_members.user_id",
+  labels_project_title_uq: "labels.project_id, labels.title",
+  milestones_project_title_uq: "milestones.project_id, milestones.title",
+  project_imports_active_uq: "project_imports.project_id",
+};
+
+function errorText(error: unknown): string {
+  const parts: string[] = [];
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    const record = current as {
+      message?: unknown;
+      code?: unknown;
+      cause?: unknown;
+    };
+    if (typeof record.code === "string") parts.push(record.code);
+    if (typeof record.message === "string") parts.push(record.message);
+    current = record.cause;
+  }
+  return parts.join("\n");
+}
+
 export function isUniqueViolation(
   error: unknown,
   constraint?: string
 ): boolean {
-  if (!error || typeof error !== "object") return false;
-  const candidate = error as {
-    code?: unknown;
-    constraint_name?: unknown;
-    constraint?: unknown;
-    message?: unknown;
-  };
-  if (candidate.code !== "23505") return false;
+  const text = errorText(error);
+  const unique =
+    text.includes("UNIQUE constraint failed") ||
+    text.includes("SQLITE_CONSTRAINT") ||
+    text.includes("23505");
+  if (!unique) return false;
   if (!constraint) return true;
-  return (
-    candidate.constraint_name === constraint ||
-    candidate.constraint === constraint ||
-    (typeof candidate.message === "string" &&
-      candidate.message.includes(constraint))
-  );
+  const target = (UNIQUE_TARGETS[constraint] ?? constraint).replaceAll(" ", "");
+  return text.replaceAll(" ", "").includes(target) || text.includes(constraint);
 }
 
 export function tooLarge(message: string): AppError {

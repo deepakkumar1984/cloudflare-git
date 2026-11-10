@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { authClient } from "@/lib/auth";
+import { useAppName } from "@/lib/meta";
 import { BoardPage } from "@/pages/BoardPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { GroupMembersPage } from "@/pages/GroupMembersPage";
@@ -34,12 +35,13 @@ import { SignInPage } from "@/pages/SignInPage";
 import { SignUpPage } from "@/pages/SignUpPage";
 
 function AuthLoading() {
+  const appName = useAppName();
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="flex items-center gap-3 text-muted">
         <img src="/mark.svg" alt="" className="size-8 rounded-lg" />
         <Loader2 className="size-4 animate-spin" />
-        <span className="text-sm">Opening Deesha…</span>
+        <span className="text-sm">Opening {appName}…</span>
       </div>
     </div>
   );

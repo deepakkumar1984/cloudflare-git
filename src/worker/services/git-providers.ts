@@ -243,13 +243,13 @@ function apiHeaders(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "Deesha-Git",
+      "User-Agent": "cloudflare-git",
     };
   }
   return {
     ...(token ? { "PRIVATE-TOKEN": token } : {}),
     Accept: "application/json",
-    "User-Agent": "Deesha-Git",
+    "User-Agent": "cloudflare-git",
   };
 }
 

@@ -37,7 +37,7 @@ function fromBase64(value: string): Uint8Array<ArrayBuffer> {
 async function deriveKey(secret: string): Promise<CryptoKey> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    encoder.encode(`deesha-git:provider-token:v1:${secret}`)
+    encoder.encode(`cloudflare-git:provider-token:v1:${secret}`)
   );
   return crypto.subtle.importKey("raw", digest, "AES-GCM", false, [
     "encrypt",

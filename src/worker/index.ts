@@ -1,5 +1,5 @@
 import { createApp } from "./app";
-import { createDatabase, resolveDatabaseConnectionString } from "@db/client";
+import { createDatabase } from "@db/client";
 import { getGitStorage } from "./artifacts";
 import { reconcileProjectImports } from "./services/project-imports";
 import { reconcileStaleProjects } from "./services/reconcile";
@@ -18,14 +18,12 @@ export default {
     env: Env,
     _ctx: ExecutionContext
   ): Promise<void> {
-    const handle = createDatabase(resolveDatabaseConnectionString(env));
+    const db = createDatabase(env.DB);
     try {
-      await reconcileStaleProjects(handle.db, getGitStorage(env));
-      await reconcileProjectImports(handle.db, getGitStorage(env), env);
+      await reconcileStaleProjects(db, getGitStorage(env));
+      await reconcileProjectImports(db, getGitStorage(env), env);
     } catch (error) {
       console.error("scheduled_reconcile_failed", error);
-    } finally {
-      await handle.close().catch(() => undefined);
     }
   },
 } satisfies ExportedHandler<Env>;

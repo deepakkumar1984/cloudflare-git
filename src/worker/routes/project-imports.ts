@@ -111,7 +111,7 @@ projectImportRoutes.post(
         201
       );
     } catch (error) {
-      if (isUniqueViolation(error, "projects_group_slug_uq")) {
+      if (isUniqueViolation(error, "projects.group_id, projects.slug")) {
         throw conflict("That project path is already taken");
       }
       throw error;
@@ -180,7 +180,7 @@ projectImportRoutes.post(
         201
       );
     } catch (error) {
-      if (isUniqueViolation(error, "projects_group_slug_uq")) {
+      if (isUniqueViolation(error, "projects.group_id, projects.slug")) {
         throw conflict("That project path is already taken");
       }
       throw error;

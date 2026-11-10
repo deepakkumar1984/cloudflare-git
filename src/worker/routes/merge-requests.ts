@@ -4,8 +4,8 @@ import {
   count,
   desc,
   eq,
-  ilike,
   inArray,
+  like,
   or,
   type SQL,
 } from "drizzle-orm";
@@ -22,6 +22,8 @@ import {
   user,
   type MergeRequest,
 } from "@db/schema";
+import { writeBatch } from "@db/batch";
+import { likeContains } from "@shared/like";
 import {
   atLeast,
   canComment,
@@ -68,7 +70,7 @@ export const mergeRequestRoutes = new Hono<AppEnv>();
 
 const mrListQuery = paginationSchema.extend({
   state: z.enum(["opened", "merged", "closed", "all"]).default("opened"),
-  q: z.string().trim().max(200).optional(),
+  q: z.string().trim().max(200).optional(), // truncated to 48 bytes before LIKE
   author: userIdSchema.optional(),
   assignee: userIdSchema.optional(),
   reviewer: userIdSchema.optional(),
@@ -311,10 +313,11 @@ mergeRequestRoutes.get(
     if (query.state !== "all")
       conditions.push(eq(mergeRequests.state, query.state));
     if (query.q) {
+      const pattern = likeContains(query.q);
       conditions.push(
         or(
-          ilike(mergeRequests.title, `%${query.q}%`),
-          ilike(mergeRequests.description, `%${query.q}%`)
+          like(mergeRequests.title, pattern),
+          like(mergeRequests.description, pattern)
         )!
       );
     }
@@ -465,11 +468,15 @@ mergeRequestRoutes.post(
     await validateMrRelations(db, project, input, session.user.id);
     const base = await findMergeBase(storage, project, sourceSha, targetSha);
 
-    const mr = await db.transaction(async (tx) => {
-      const iid = await allocateIid(tx, project.id);
-      const [created] = await tx
+    const iid = await allocateIid(db, project.id);
+    const mergeRequestId = crypto.randomUUID();
+    const assignees = [...new Set(input.assigneeIds ?? [])];
+    const reviewerIds = [...new Set(input.reviewerIds ?? [])];
+    const [createdRows] = await writeBatch(db, [
+      db
         .insert(mergeRequests)
         .values({
+          id: mergeRequestId,
           projectId: project.id,
           iid,
           title: input.title,
@@ -483,26 +490,28 @@ mergeRequestRoutes.post(
           milestoneId: input.milestoneId ?? null,
           draft: input.draft,
         })
-        .returning();
-      if (!created) throw new Error("Could not create merge request");
-      const assignees = [...new Set(input.assigneeIds ?? [])];
-      if (assignees.length > 0) {
-        await tx.insert(mergeRequestAssignees).values(
-          assignees.map((userId) => ({
-            mergeRequestId: created.id,
-            userId,
-          }))
-        );
-      }
-      for (const reviewerId of new Set(input.reviewerIds ?? [])) {
-        await tx.insert(mergeRequestReviewers).values({
-          mergeRequestId: created.id,
-          userId: reviewerId,
-          requestedById: session.user.id,
-        });
-      }
-      return created;
-    });
+        .returning(),
+      ...(assignees.length > 0
+        ? [
+            db
+              .insert(mergeRequestAssignees)
+              .values(assignees.map((userId) => ({ mergeRequestId, userId }))),
+          ]
+        : []),
+      ...(reviewerIds.length > 0
+        ? [
+            db.insert(mergeRequestReviewers).values(
+              reviewerIds.map((userId) => ({
+                mergeRequestId,
+                userId,
+                requestedById: session.user.id,
+              }))
+            ),
+          ]
+        : []),
+    ]);
+    const mr = (createdRows as MergeRequest[])[0];
+    if (!mr) throw new Error("Could not create merge request");
 
     await recordEvent(db, {
       projectId: project.id,
@@ -570,8 +579,14 @@ mergeRequestRoutes.patch(
       }
     }
 
-    await db.transaction(async (tx) => {
-      await tx
+    const assigneeIds = input.assigneeIds
+      ? [...new Set(input.assigneeIds)]
+      : null;
+    const reviewerIds = input.reviewerIds
+      ? [...new Set(input.reviewerIds)]
+      : null;
+    await writeBatch(db, [
+      db
         .update(mergeRequests)
         .set({
           ...(input.title === undefined ? {} : { title: input.title }),
@@ -590,48 +605,57 @@ mergeRequestRoutes.patch(
           ...(input.draft === undefined ? {} : { draft: input.draft }),
           updatedAt: new Date(),
         })
-        .where(eq(mergeRequests.id, row.mr.id));
-
-      if (input.assigneeIds) {
-        await tx
-          .delete(mergeRequestAssignees)
-          .where(eq(mergeRequestAssignees.mergeRequestId, row.mr.id));
-        const ids = [...new Set(input.assigneeIds)];
-        if (ids.length > 0) {
-          await tx
-            .insert(mergeRequestAssignees)
-            .values(
-              ids.map((userId) => ({ mergeRequestId: row.mr.id, userId }))
-            );
-        }
-      }
-
-      if (input.reviewerIds) {
-        await tx
-          .delete(mergeRequestApprovals)
-          .where(eq(mergeRequestApprovals.mergeRequestId, row.mr.id));
-        await tx
-          .delete(mergeRequestReviewers)
-          .where(eq(mergeRequestReviewers.mergeRequestId, row.mr.id));
-        for (const reviewerId of new Set(input.reviewerIds)) {
-          await tx.insert(mergeRequestReviewers).values({
-            mergeRequestId: row.mr.id,
-            userId: reviewerId,
-            requestedById: session.user.id,
-          });
-        }
-      }
-
-      if (targetChanged) {
-        await tx
-          .delete(mergeRequestApprovals)
-          .where(eq(mergeRequestApprovals.mergeRequestId, row.mr.id));
-        await tx
-          .update(mergeRequestReviewers)
-          .set({ state: "pending", reviewedAt: null })
-          .where(eq(mergeRequestReviewers.mergeRequestId, row.mr.id));
-      }
-    });
+        .where(eq(mergeRequests.id, row.mr.id)),
+      ...(assigneeIds
+        ? [
+            db
+              .delete(mergeRequestAssignees)
+              .where(eq(mergeRequestAssignees.mergeRequestId, row.mr.id)),
+            ...(assigneeIds.length > 0
+              ? [
+                  db.insert(mergeRequestAssignees).values(
+                    assigneeIds.map((userId) => ({
+                      mergeRequestId: row.mr.id,
+                      userId,
+                    }))
+                  ),
+                ]
+              : []),
+          ]
+        : []),
+      ...(reviewerIds
+        ? [
+            db
+              .delete(mergeRequestApprovals)
+              .where(eq(mergeRequestApprovals.mergeRequestId, row.mr.id)),
+            db
+              .delete(mergeRequestReviewers)
+              .where(eq(mergeRequestReviewers.mergeRequestId, row.mr.id)),
+            ...(reviewerIds.length > 0
+              ? [
+                  db.insert(mergeRequestReviewers).values(
+                    reviewerIds.map((userId) => ({
+                      mergeRequestId: row.mr.id,
+                      userId,
+                      requestedById: session.user.id,
+                    }))
+                  ),
+                ]
+              : []),
+          ]
+        : []),
+      ...(targetChanged
+        ? [
+            db
+              .delete(mergeRequestApprovals)
+              .where(eq(mergeRequestApprovals.mergeRequestId, row.mr.id)),
+            db
+              .update(mergeRequestReviewers)
+              .set({ state: "pending" as const, reviewedAt: null })
+              .where(eq(mergeRequestReviewers.mergeRequestId, row.mr.id)),
+          ]
+        : []),
+    ]);
 
     await recordEvent(db, {
       projectId: project.id,

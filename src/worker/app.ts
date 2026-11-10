@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import { configuredAppName } from "@shared/constants";
 import type { AppEnv } from "./env";
 import { errorResponse } from "./middleware/context";
 import {
@@ -37,10 +38,13 @@ export function createApp() {
     requestContext
   );
 
+  app.get("/api/meta", (c) =>
+    c.json({ appName: configuredAppName(c.env.APP_NAME) })
+  );
+
   app.get("/api/health", async (c) => {
     try {
-      const sql = c.get("sql");
-      await sql`select 1 as ok`;
+      await c.env.DB.prepare("select 1 as ok").first();
       return c.json({
         ok: true,
         environment: c.env.ENVIRONMENT,

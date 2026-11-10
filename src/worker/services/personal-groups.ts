@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { Database } from "@db/client";
 import { groupMembers, groups, type Group, type User } from "@db/schema";
 import { isReservedSlug, slugify } from "@shared/slugs";
+import { isUniqueViolation } from "@worker/lib/errors";
 
 type Person = Pick<User, "id" | "email" | "name" | "username">;
 
@@ -42,11 +43,13 @@ export async function ensurePersonalGroup(
       .limit(1);
     if (taken) continue;
 
+    const groupId = crypto.randomUUID();
     try {
-      return await db.transaction(async (tx) => {
-        const [group] = await tx
+      const [createdRows] = await db.batch([
+        db
           .insert(groups)
           .values({
+            id: groupId,
             slug,
             name: person.name || person.username || "Personal",
             description: `Personal projects for ${person.username || person.email}`,
@@ -54,24 +57,19 @@ export async function ensurePersonalGroup(
             personal: true,
             createdBy: person.id,
           })
-          .returning();
-        if (!group) throw new Error("Could not create personal group");
-        await tx.insert(groupMembers).values({
-          groupId: group.id,
+          .returning(),
+        db.insert(groupMembers).values({
+          groupId,
           userId: person.id,
           role: "owner",
-        });
-        return group;
-      });
+        }),
+      ]);
+      const group = createdRows[0];
+      if (!group) throw new Error("Could not create personal group");
+      return group;
     } catch (error) {
       // A concurrent signup may have taken the slug; try the next suffix.
-      const message = error instanceof Error ? error.message : String(error);
-      if (
-        message.includes("groups_slug_uq") ||
-        message.includes("duplicate key")
-      ) {
-        continue;
-      }
+      if (isUniqueViolation(error, "groups.slug")) continue;
       throw error;
     }
   }

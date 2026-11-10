@@ -18,7 +18,7 @@ beforeEach(async () => {
   project = {
     id: "00000000-0000-4000-8000-000000000001",
     artifactsRepoName: repoName,
-    artifactsNamespace: "deesha-git",
+    artifactsNamespace: "cloudflare-git",
   } as Project;
 });
 

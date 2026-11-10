@@ -1,6 +1,7 @@
-import { and, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
 import { Hono } from "hono";
 import { groups, issues, mergeRequests, projects } from "@db/schema";
+import { likeContains } from "@shared/like";
 import { searchSchema } from "@shared/schemas";
 import type { AppEnv } from "@worker/env";
 import {
@@ -27,7 +28,7 @@ searchRoutes.get("/search", async (c) => {
   }
 
   const confidentialIds = await confidentialProjectIds(db, session);
-  const like = `%${input.q}%`;
+  const pattern = likeContains(input.q);
   const issueVisibility: SQL = confidentialIds.length
     ? or(
         eq(issues.confidential, false),
@@ -51,9 +52,9 @@ searchRoutes.get("/search", async (c) => {
         and(
           inArray(projects.id, ids),
           or(
-            ilike(projects.name, like),
-            ilike(projects.slug, like),
-            ilike(projects.description, like)
+            like(projects.name, pattern),
+            like(projects.slug, pattern),
+            like(projects.description, pattern)
           )
         )
       )
@@ -78,7 +79,7 @@ searchRoutes.get("/search", async (c) => {
         and(
           inArray(issues.projectId, ids),
           issueVisibility,
-          or(ilike(issues.title, like), ilike(issues.description, like))
+          or(like(issues.title, pattern), like(issues.description, pattern))
         )
       )
       .orderBy(desc(issues.updatedAt))
@@ -103,8 +104,8 @@ searchRoutes.get("/search", async (c) => {
         and(
           inArray(mergeRequests.projectId, ids),
           or(
-            ilike(mergeRequests.title, like),
-            ilike(mergeRequests.description, like)
+            like(mergeRequests.title, pattern),
+            like(mergeRequests.description, pattern)
           )
         )
       )

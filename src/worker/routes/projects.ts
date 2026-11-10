@@ -10,7 +10,7 @@ import {
   projects,
   user,
 } from "@db/schema";
-import { ROLE_RANK, type Role } from "@shared/constants";
+import { ROLE_RANK, configuredAppName, type Role } from "@shared/constants";
 import {
   canArchiveProject,
   canManageProjectMembers,
@@ -359,7 +359,12 @@ projectRoutes.post(
       return c.json({ project: projectSummary(project, c.get("role")) });
     }
     const storage = getGitStorage(c.env);
-    const updated = await provisionProject(c.get("db"), storage, project);
+    const updated = await provisionProject(
+      c.get("db"),
+      storage,
+      project,
+      configuredAppName(c.env.APP_NAME)
+    );
     return c.json({ project: projectSummary(updated, c.get("role")) });
   }
 );
@@ -520,7 +525,12 @@ projectRoutes.post(
         201
       );
     } catch (error) {
-      if (isUniqueViolation(error, "project_members_project_user_uq")) {
+      if (
+        isUniqueViolation(
+          error,
+          "project_members.project_id, project_members.user_id"
+        )
+      ) {
         throw conflict("That user is already a direct member");
       }
       throw error;

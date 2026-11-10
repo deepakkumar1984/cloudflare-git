@@ -1,13 +1,13 @@
 import { createHash } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { importProxySessions, projectImports } from "@db/schema";
+import { IMPORT_TOKEN_PREFIX } from "@shared/constants";
 import { createApp } from "@worker/app";
 import { encryptProviderToken } from "@worker/services/token-vault";
 import {
   closeTestDatabase,
   getTestDatabase,
   resetDatabase,
-  testDatabaseUrl,
 } from "../helpers/db";
 
 const origin = "http://localhost:5173";
@@ -18,14 +18,14 @@ beforeEach(async () => {
   await resetDatabase();
   app = createApp();
   env = {
-    HYPERDRIVE: { connectionString: testDatabaseUrl },
+    DB: (await getTestDatabase()).d1,
     BETTER_AUTH_SECRET: "test-secret-".repeat(4),
     PROVIDER_TOKEN_KEY: "test-provider-key-".repeat(3),
     BETTER_AUTH_URL: origin,
     APP_URL: origin,
     ADMIN_EMAILS: "",
     ARTIFACTS_FAKE: "true",
-    ARTIFACTS_NAMESPACE: "deesha-git",
+    ARTIFACTS_NAMESPACE: "cloudflare-git",
     ENVIRONMENT: "development",
     GIT_PROVIDERS_FAKE: "true",
   } as unknown as Env;
@@ -362,9 +362,11 @@ describe("provider connections and repository imports", () => {
     expect(afterDisconnect.json!.connections).toEqual([]);
 
     const db = (await getTestDatabase()).db;
-    const rawProxyToken = `deesha_import_${Buffer.from(
-      crypto.getRandomValues(new Uint8Array(32))
-    ).toString("base64url")}`;
+    const rawProxyToken =
+      IMPORT_TOKEN_PREFIX +
+      Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString(
+        "base64url"
+      );
     const [proxyImport] = await db
       .insert(projectImports)
       .values({
@@ -378,6 +380,8 @@ describe("provider connections and repository imports", () => {
       })
       .returning();
     if (!proxyImport) throw new Error("Could not create proxy import");
+    const providerKey = env.PROVIDER_TOKEN_KEY;
+    if (!providerKey) throw new Error("PROVIDER_TOKEN_KEY missing");
     await db.insert(importProxySessions).values({
       tokenHash: proxyTokenHash(rawProxyToken),
       projectImportId: proxyImport.id,
@@ -385,7 +389,7 @@ describe("provider connections and repository imports", () => {
       externalRepo: "demo/private-service",
       gitBaseUrl: "https://github.com",
       encryptedToken: await encryptProviderToken(
-        env.PROVIDER_TOKEN_KEY,
+        providerKey,
         "ghp_private_token"
       ),
       expiresAt: new Date(Date.now() + 60_000),

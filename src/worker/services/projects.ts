@@ -14,6 +14,7 @@ import {
 import {
   BOARD_DEFAULT_LISTS,
   DEFAULT_BRANCH,
+  configuredAppName,
   type Visibility,
 } from "@shared/constants";
 import type { GitStorage } from "@worker/artifacts";
@@ -41,11 +42,20 @@ export async function createProjectShell(
 ): Promise<Project> {
   const artifactsRepoName = newArtifactsRepoName();
   const artifactsNamespace = env.ARTIFACTS_NAMESPACE;
+  const projectId = crypto.randomUUID();
+  const labelRows = BOARD_DEFAULT_LISTS.map((label) => ({
+    id: crypto.randomUUID(),
+    projectId,
+    title: label.name,
+    color: label.color,
+  }));
+  const boardId = crypto.randomUUID();
 
-  const project = await db.transaction(async (tx) => {
-    const [created] = await tx
+  const [createdRows] = await db.batch([
+    db
       .insert(projects)
       .values({
+        id: projectId,
         groupId: input.groupId,
         slug: input.slug,
         name: input.name,
@@ -56,41 +66,26 @@ export async function createProjectShell(
         artifactsRepoName,
         createdBy: creator.id,
       })
-      .returning();
-    if (!created) throw new Error("Could not create project");
-
-    await tx.insert(projectMembers).values({
-      projectId: created.id,
+      .returning(),
+    db.insert(projectMembers).values({
+      projectId,
       userId: creator.id,
       role: "maintainer",
-    });
-    await tx.insert(projectCounters).values({ projectId: created.id });
-    const createdLabels = await tx
-      .insert(labels)
-      .values(
-        BOARD_DEFAULT_LISTS.map((label) => ({
-          projectId: created.id,
-          title: label.name,
-          color: label.color,
-        }))
-      )
-      .returning();
-    const [board] = await tx
-      .insert(boards)
-      .values({ projectId: created.id })
-      .returning();
-    if (board) {
-      await tx.insert(boardLists).values(
-        createdLabels.map((label, index) => ({
-          boardId: board.id,
-          labelId: label.id,
-          name: label.title,
-          position: index,
-        }))
-      );
-    }
-    return created;
-  });
+    }),
+    db.insert(projectCounters).values({ projectId }),
+    db.insert(labels).values(labelRows),
+    db.insert(boards).values({ id: boardId, projectId }),
+    db.insert(boardLists).values(
+      labelRows.map((label, index) => ({
+        boardId,
+        labelId: label.id,
+        name: label.title,
+        position: index,
+      }))
+    ),
+  ]);
+  const project = createdRows[0];
+  if (!project) throw new Error("Could not create project");
 
   await recordEvent(db, {
     projectId: project.id,
@@ -113,7 +108,12 @@ export async function createProject(
   input: CreateProjectInput
 ): Promise<Project> {
   const project = await createProjectShell(db, env, creator, input);
-  return provisionProject(db, storage, project);
+  return provisionProject(
+    db,
+    storage,
+    project,
+    configuredAppName(env.APP_NAME)
+  );
 }
 
 /**
@@ -123,7 +123,8 @@ export async function createProject(
 export async function provisionProject(
   db: Database,
   storage: GitStorage,
-  project: Project
+  project: Project,
+  appName = configuredAppName(undefined)
 ): Promise<Project> {
   if (project.provisioningState === "ready" && project.artifactsRemote) {
     return project;
@@ -133,7 +134,7 @@ export async function provisionProject(
   let initialToken: string | null = null;
   try {
     const created = await storage.createRepository(project.artifactsRepoName, {
-      description: project.description || `Deesha Git project ${project.name}`,
+      description: project.description || `${appName} project ${project.name}`,
       setDefaultBranch: project.defaultBranch || DEFAULT_BRANCH,
     });
     remote = created.remote;

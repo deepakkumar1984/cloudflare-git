@@ -2,6 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { gitRefs, projects } from "@db/schema";
+import { configuredAppName } from "@shared/constants";
 import { getFakeGitStorage } from "@worker/artifacts/fake-storage";
 import { getGitStorage } from "@worker/artifacts";
 import type { AppEnv } from "@worker/env";
@@ -230,7 +231,8 @@ repositoryRoutes.post(
     assertRole(c, "reporter");
     const project = c.get("project");
     const db = c.get("db");
-    const fake = getFakeGitStorage();
+    const fake = getFakeGitStorage(c.env.ARTIFACTS_NAMESPACE);
+    const appName = configuredAppName(c.env.APP_NAME);
 
     try {
       await fake.getRepositoryInfo(project.artifactsRepoName);
@@ -267,9 +269,9 @@ repositoryRoutes.post(
     )?.oid;
     const timestamp = Math.floor(Date.now() / 1_000);
     const baseFiles: Record<string, string> = {
-      "README.md": `# ${project.name}\n\n${project.description || "A project on Deesha Git."}\n\n## Getting started\n\n- Browse the tree in the repository tab\n- Open an issue from the issue board\n- Push a branch and open a merge request\n`,
+      "README.md": `# ${project.name}\n\n${project.description || `A project on ${appName}.`}\n\n## Getting started\n\n- Browse the tree in the repository tab\n- Open an issue from the issue board\n- Push a branch and open a merge request\n`,
       ".gitignore": "node_modules/\ndist/\n.env\n.dev.vars\n",
-      "src/index.ts": `export function hello(name: string): string {\n  return \`Hello, \${name}!\`;\n}\n\nconsole.log(hello("Deesha"));\n`,
+      "src/index.ts": `export function hello(name: string): string {\n  return \`Hello, \${name}!\`;\n}\n\nconsole.log(hello("world"));\n`,
       "docs/architecture.md": `# Architecture\n\nThis repository is stored in Cloudflare Artifacts.\n\n- \`src/\` contains application code\n- \`docs/\` contains design notes\n`,
       "package.json": JSON.stringify(
         {
@@ -290,7 +292,7 @@ repositoryRoutes.post(
             "README.md": `${baseFiles["README.md"]}\n## Review this branch\n\nThe demo branch updates the greeting and adds a changelog so the merge request has a real diff.\n`,
             "CHANGELOG.md":
               "# Changelog\n\n## Unreleased\n\n- Add a friendlier greeting\n",
-            "src/index.ts": `export function hello(name: string): string {\n  return \`Hello, \${name}! Welcome to Deesha.\`;\n}\n\nexport function farewell(name: string): string {\n  return \`Goodbye, \${name}.\`;\n}\n\nconsole.log(hello("Deesha"));\n`,
+            "src/index.ts": `export function hello(name: string): string {\n  return \`Hello, \${name}! Welcome.\`;\n}\n\nexport function farewell(name: string): string {\n  return \`Goodbye, \${name}.\`;\n}\n\nconsole.log(hello("world"));\n`,
           };
     const seed = fake.seedCommit(project.artifactsRepoName, {
       branch,
@@ -298,7 +300,7 @@ repositoryRoutes.post(
       message: branchExists
         ? `Update ${branch} demo files`
         : branch === project.defaultBranch
-          ? "Initial commit from Deesha demo data"
+          ? `Initial commit from ${appName} demo data`
           : "Add friendlier greeting and changelog",
       timestamp,
       files: featureFiles,
@@ -330,7 +332,7 @@ repositoryRoutes.post(
       .set({
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
-        artifactsRemote: sql`coalesce(${projects.artifactsRemote}, ${`https://fake-artifacts.local/git/deesha-git/${project.artifactsRepoName}.git`})`,
+        artifactsRemote: sql`coalesce(${projects.artifactsRemote}, ${`https://fake-artifacts.local/git/${c.env.ARTIFACTS_NAMESPACE}/${project.artifactsRepoName}.git`})`,
       })
       .where(eq(projects.id, project.id));
     await recordEvent(db, {

@@ -3,7 +3,7 @@ import {
   type WorkflowEvent,
   type WorkflowStep,
 } from "cloudflare:workers";
-import { createDatabase, resolveDatabaseConnectionString } from "@db/client";
+import { createDatabase } from "@db/client";
 import { getGitStorage } from "@worker/artifacts";
 import { syncPushEvent } from "@worker/services/git-sync";
 
@@ -37,20 +37,13 @@ export class PushSyncWorkflow extends WorkflowEntrypoint<
       "sync Artifacts push",
       { retries: { limit: 5, delay: "10 seconds", backoff: "exponential" } },
       async () => {
-        const handle = createDatabase(
-          resolveDatabaseConnectionString(this.env)
+        return syncPushEvent(
+          createDatabase(this.env.DB),
+          getGitStorage(this.env),
+          this.env,
+          event.payload,
+          event.instanceId
         );
-        try {
-          return await syncPushEvent(
-            handle.db,
-            getGitStorage(this.env),
-            this.env,
-            event.payload,
-            event.instanceId
-          );
-        } finally {
-          await handle.close().catch(() => undefined);
-        }
       }
     );
     console.log("artifacts_push_sync_result", result);

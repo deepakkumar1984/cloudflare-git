@@ -14,7 +14,6 @@ import {
   closeTestDatabase,
   getTestDatabase,
   resetDatabase,
-  testDatabaseUrl,
 } from "../helpers/db";
 
 const origin = "http://localhost:5173";
@@ -27,14 +26,14 @@ beforeEach(async () => {
   await resetDatabase();
   app = createApp();
   env = {
-    HYPERDRIVE: { connectionString: testDatabaseUrl },
+    DB: (await getTestDatabase()).d1,
     BETTER_AUTH_SECRET: "test-secret-".repeat(4),
     PROVIDER_TOKEN_KEY: "test-provider-key-".repeat(3),
     BETTER_AUTH_URL: origin,
     APP_URL: origin,
     ADMIN_EMAILS: "",
     ARTIFACTS_FAKE: "true",
-    ARTIFACTS_NAMESPACE: "deesha-git",
+    ARTIFACTS_NAMESPACE: "cloudflare-git",
     ENVIRONMENT: "development",
   } as unknown as Env;
 });
@@ -97,7 +96,7 @@ async function createProject(): Promise<{
   const { db } = await getTestDatabase();
   const [project] = await db.select().from(projects).limit(1);
   if (!project) throw new Error("Project was not created");
-  const remote = `https://${accountId}.artifacts.cloudflare.net/git/deesha-git/${project.artifactsRepoName}.git`;
+  const remote = `https://${accountId}.artifacts.cloudflare.net/git/cloudflare-git/${project.artifactsRepoName}.git`;
   await db
     .update(projects)
     .set({ artifactsRemote: remote })
@@ -131,7 +130,7 @@ describe("Git smart-HTTP proxy", () => {
     );
 
     const response = await call(
-      `/git/deesha-git/${repoName}.git/info/refs?service=git-upload-pack`,
+      `/git/cloudflare-git/${repoName}.git/info/refs?service=git-upload-pack`,
       {
         headers: {
           authorization: "Bearer art_test",
@@ -165,7 +164,7 @@ describe("Git smart-HTTP proxy", () => {
     });
 
     const response = await call(
-      `/git/deesha-git/${repoName}.git/git-receive-pack`,
+      `/git/cloudflare-git/${repoName}.git/git-receive-pack`,
       {
         method: "POST",
         headers: {
@@ -190,13 +189,13 @@ describe("Git smart-HTTP proxy", () => {
     const upstream = stubUpstream(() => new Response("unexpected"));
 
     const unauthenticated = await call(
-      `/git/deesha-git/${repoName}.git/info/refs?service=git-upload-pack`
+      `/git/cloudflare-git/${repoName}.git/info/refs?service=git-upload-pack`
     );
     expect(unauthenticated.status).toBe(401);
     expect(unauthenticated.headers.get("www-authenticate")).toContain("Basic");
 
     const unknown = await call(
-      "/git/deesha-git/p-doesnotexist.git/info/refs?service=git-upload-pack",
+      "/git/cloudflare-git/p-doesnotexist.git/info/refs?service=git-upload-pack",
       { headers: { authorization: "Bearer art_test" } }
     );
     expect(unknown.status).toBe(404);
@@ -208,13 +207,13 @@ describe("Git smart-HTTP proxy", () => {
     const upstream = stubUpstream(() => new Response("unexpected"));
 
     const unsupported = await call(
-      `/git/deesha-git/${repoName}.git/objects/info/packs`,
+      `/git/cloudflare-git/${repoName}.git/objects/info/packs`,
       { headers: { authorization: "Bearer art_test" } }
     );
     expect(unsupported.status).toBe(404);
 
     const wrongMethod = await call(
-      `/git/deesha-git/${repoName}.git/info/refs?service=git-upload-pack`,
+      `/git/cloudflare-git/${repoName}.git/info/refs?service=git-upload-pack`,
       { method: "PUT", headers: { authorization: "Bearer art_test" } }
     );
     expect(wrongMethod.status).toBe(405);

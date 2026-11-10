@@ -1,8 +1,9 @@
-# Deesha Git
+# Cloudflare Git
 
-A GitLab-style collaboration app built on Cloudflare Workers and Cloudflare
-Artifacts. PostgreSQL stores groups, projects, issues, reviews, and permissions;
-Artifacts stores the Git objects and refs.
+A GitLab-style collaboration app built on Cloudflare Workers, D1, and
+Artifacts. D1 stores groups, projects, issues, reviews, and permissions.
+Artifacts stores the Git objects and refs. Worker name, D1 database, Artifacts
+namespace, app name, and public URL are chosen when you run `npm run setup`.
 
 ## What is in Milestone 1
 
@@ -23,13 +24,13 @@ Artifacts stores the Git objects and refs.
 - Permission-aware dashboard, project activity, and global search
 
 There is deliberately **no server-side merge**. Users merge locally and push;
-Deesha detects the result. There are also no protected branches, CI, forks,
+the app detects the result. There are also no protected branches, CI, forks,
 wikis, notifications, or anonymous/public access in M1.
 
 ## Architecture
 
 ```text
-Browser ──HTTP──> Worker (React SPA + Hono API) ──Hyperdrive──> PostgreSQL
+Browser ──HTTP──> Worker (React SPA + Hono API) ──D1──> SQLite metadata
                               │
                               └── Artifacts binding ──> Git objects / tokens
 
@@ -37,21 +38,24 @@ Git client ──HTTPS──> app Git proxy (Worker) ──> Artifacts remote
                      (short-lived Artifacts token)
 
 Push ──> Workflow ──┐
-Cron ───────────────┼──> sync service (lease + idempotent) ──> PostgreSQL
+Cron ───────────────┼──> sync service (lease + idempotent) ──> D1
 Page refresh ───────┘
 ```
 
-- **PostgreSQL** is the source of truth for collaboration data.
+- **D1** (binding `DB`) is the source of truth for collaboration metadata.
+  `npm run setup` creates or reuses the database and points local dev, E2E,
+  and deploy at that remote database. Git objects stay in Artifacts.
 - **Artifacts** is the source of truth for Git objects and refs.
-- A projection of refs/commits in Postgres powers repository browsing, MR diffs,
+- A projection of refs/commits in D1 powers repository browsing, MR diffs,
   merge detection, and activity.
 - GitHub/GitLab imports use Artifacts' native import for public remotes and a
   short-lived, authenticated Git smart-HTTP proxy for private remotes.
 - Clone and push URLs on the app's own domain are handled by a second, narrow
   Git smart-HTTP proxy (`/git/*`) that streams to the project's Artifacts
   remote. Artifacts does not support custom hostnames, so this proxy is what
-  lets `git.deesha.tech` replace the `<account>.artifacts.cloudflare.net`
-  remote. The direct Artifacts remote remains valid.
+  lets your public hostname replace the
+  `<account>.artifacts.cloudflare.net` remote. The direct Artifacts remote
+  remains valid.
 - The Workflow event trigger is the fast path. Cron reconciliation and the
   repository **Refresh** action are the fallback paths. The sync service is
   transport-agnostic.
@@ -59,35 +63,45 @@ Page refresh ───────┘
   `ARTIFACTS_FAKE=false` switches to the real binding; this has been validated
   against a live Artifacts remote (repo creation, token minting, clone/push,
   `listServerRefs`, tree/blob reads, diffs, and merge detection).
-- The same managed PostgreSQL database is used for local development and the
-  deployed Worker. Local development runs through Wrangler's Hyperdrive
-  emulation; `scripts/dev.ts` points it at `DATABASE_URL` from `.dev.vars`.
-  Deployments use the Hyperdrive binding. Tests and Playwright use isolated
-  Docker databases and never touch the managed database.
+- Local development, E2E, and the deployed Worker all use the remote D1
+  database (`remote: true` on the `DB` binding). Vitest uses an in-memory
+  database so the suite can clear tables without touching the shared one.
 
 ## Stack
 
 - Cloudflare Workers, `@cloudflare/vite-plugin`, Hono, Zod
 - React 19, React Router 7, TanStack Query, Tailwind CSS 4
-- Drizzle ORM + `postgres.js` through Cloudflare Hyperdrive
+- Drizzle ORM on Cloudflare D1 (SQLite)
 - Better Auth (email/password + username plugin)
 - Cloudflare Workflows + cron triggers
-- Vitest, Playwright (UI checks), Docker PostgreSQL
+- Vitest, Playwright, Miniflare (local D1)
 
 ## Local setup
 
-Prerequisites: Node 24+, Docker, npm, and a Wrangler-authenticated Cloudflare
-account with Artifacts access if you want to use the real storage.
+Prerequisites: Node 24+, npm, and a Wrangler-authenticated Cloudflare account
+with Artifacts access if you want to use the real storage. Docker is not required.
 
 ```bash
 npm install
+npm run setup
 cp .dev.vars.example .dev.vars
 ```
 
-Fill `.dev.vars` with the managed database connection string and secrets:
+`npm run setup` checks `wrangler whoami`, opens `wrangler login` if needed, and
+asks for the worker name, app name, D1 database name, Artifacts namespace,
+optional custom domain, and public URL. It creates the D1 database when that
+name does not already exist, then writes `wrangler.jsonc` and
+`.cloudflare-git.json`. Those two files hold your account id and database id.
+They are gitignored. Run setup again to change them.
+
+For a scripted run, set `CLOUDFLARE_GIT_APP_URL` and any of
+`CLOUDFLARE_GIT_WORKER_NAME`, `CLOUDFLARE_GIT_APP_NAME`,
+`CLOUDFLARE_GIT_D1_NAME`, `CLOUDFLARE_GIT_ARTIFACTS_NAMESPACE`, and
+`CLOUDFLARE_GIT_CUSTOM_DOMAIN`.
+
+Fill `.dev.vars` with secrets:
 
 ```dotenv
-DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DATABASE?sslmode=prefer
 BETTER_AUTH_SECRET=<openssl rand -base64 32>
 PROVIDER_TOKEN_KEY=<openssl rand -base64 32>
 BETTER_AUTH_URL=http://localhost:5173
@@ -99,17 +113,13 @@ ARTIFACTS_FAKE=true
 # GIT_PROVIDERS_FAKE=true
 ```
 
-Then apply migrations to the managed database and start the app:
+`npm run dev` applies migrations to the remote D1 database from `wrangler.jsonc`
+and starts Vite. That is the same database the deployed Worker uses. The app
+name shown in the UI comes from the `APP_NAME` var (`GET /api/meta`).
 
 ```bash
-npm run db:migrate
 npm run dev
 ```
-
-The npm `dev` script runs Wrangler's local Hyperdrive emulation against
-`DATABASE_URL`. Deployed Workers use the Hyperdrive binding configured in
-`wrangler.jsonc`. The Docker `db` service is no longer required for app
-development; `db:test:up` is only for the isolated test database.
 
 Open <http://localhost:5173>, create an account, and create a group/project.
 Emails listed in `ADMIN_EMAILS` are promoted to admin on account creation; an
@@ -152,7 +162,7 @@ Open a group and choose **Import repo**, or visit
   listing, imports, and re-imports until disconnected. Plaintext tokens are
   never returned by the API or stored in logs.
 - Keep `PROVIDER_TOKEN_KEY` identical across local and deployed environments
-  because they share the database. Rotating it requires reconnecting accounts.
+  when they share imported credentials. Rotating it requires reconnecting accounts.
 - Private repositories are fetched through a short-lived, repo-scoped Worker
   proxy because the Artifacts import API has no credential parameter. The
   proxy URL contains a random one-time import capability, allows only
@@ -178,27 +188,29 @@ Open a group and choose **Import repo**, or visit
 
 ### Custom domain and clone URLs
 
-The app is served on `https://git.deesha.tech`. The custom hostname lives in the
-top-level `routes` block in `wrangler.jsonc` and requires the `deesha.tech` zone
-to be active on the same Cloudflare account. Wrangler creates the DNS record and
-certificate on deploy.
+Leave the custom domain blank in setup to serve the Worker on
+`https://<worker-name>.<account-subdomain>.workers.dev`. To use your own
+hostname, enter it during setup. The zone must already be on the same
+Cloudflare account. Wrangler creates the DNS record and certificate on deploy.
 
-`npm run deploy` also injects the production runtime values, overriding the
-local defaults in `wrangler.jsonc`:
+`npm run deploy` reads `.cloudflare-git.json` and overrides the local defaults
+in `wrangler.jsonc` for that deployment:
 
-```bash
-APP_URL=https://git.deesha.tech
-BETTER_AUTH_URL=https://git.deesha.tech
+```text
+APP_URL=<public origin from setup>
+BETTER_AUTH_URL=<same origin>
+APP_NAME=<app name from setup>
 ENVIRONMENT=production
 ```
 
-If the domain changes, update both `routes[0].pattern` and those `--var` values
-in the `deploy` script, then redeploy.
+Local `wrangler.jsonc` keeps `APP_URL=http://localhost:5173` and
+`ENVIRONMENT=development`. Run `npm run setup` again when the public URL or
+domain changes.
 
 Artifacts has no custom-domain support: the real remote is always
 `https://<ACCOUNT_ID>.artifacts.cloudflare.net/git/<namespace>/<repo>.git`. The
-API therefore rewrites clone URLs to `https://git.deesha.tech/git/...`, and the
-Worker's proxy forwards them:
+API rewrites clone URLs onto the public app origin, and the Worker's proxy
+forwards them:
 
 - Only the Git smart-HTTP operations (`info/refs`, `git-upload-pack`,
   `git-receive-pack`) are accepted; the namespace and repository must exist in
@@ -215,31 +227,33 @@ Worker's proxy forwards them:
 ### Tests
 
 ```bash
-npm run db:test:up
 npm test
 npm run typecheck
 npm run lint
 ```
 
-Integration tests use the Docker database on port `55433` by default and refuse
-to run against any other host/port/database name. They apply migrations and
-truncate all public tables between tests. `TEST_DATABASE_URL` may override the
-default only if it still points at a `localhost:55433` database ending in
-`_test`. Tests never touch the managed app database. `npm test` runs unit tests
-and integration tests sequentially.
+Integration tests boot an in-memory Miniflare D1 database, apply
+`src/db/migrations`, and delete every application table between tests. They
+do not open the remote database, because each test clears every table.
+`npm test` runs unit tests and integration tests sequentially.
+
+Search queries are trimmed to 48 UTF-8 bytes before `LIKE`, because D1 rejects
+patterns longer than 50 bytes. `%` and `_` in the query still act as wildcards.
+SQLite `LIKE` is case-insensitive for ASCII only. Bulk inserts are chunked so
+a statement stays under D1's 100 bound parameters. D1 has no interactive
+transactions; multi-row writes use `db.batch`, which is atomic. An IID can be
+skipped if the insert after allocation fails.
 
 The Playwright smoke test drives the real UI: signup, group/project setup,
 provider-import page rendering, branch seeding, merge-request creation, review
 approval, diff viewing, and issue close/reopen. It starts its own dev server on
-port `5174` against the isolated Docker test database (never the managed app
-database) and creates random users and slugs. The E2E server always runs with
-`ARTIFACTS_FAKE=true` so tests never call the real Artifacts or GitHub APIs,
-even when the developer's `.dev.vars` uses live storage; the wrapper generates
-a temporary `.dev.vars.e2e` (mode `0600`, removed on shutdown) and selects it
-with `CLOUDFLARE_ENV=e2e`.
+port `5174` against the remote D1 database and creates random users and slugs
+there. The E2E server always runs with `ARTIFACTS_FAKE=true` so tests never
+call the real Artifacts or GitHub APIs, even when the developer's `.dev.vars`
+uses live storage; the wrapper generates a temporary `.dev.vars.e2e` (mode
+`0600`, removed on shutdown) and selects it with `CLOUDFLARE_ENV=e2e`.
 
 ```bash
-npm run db:test:up
 npx playwright install chromium
 npm run test:e2e
 ```
@@ -248,45 +262,47 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
 
 ### Useful scripts
 
-| Command               | Purpose                                |
-| --------------------- | -------------------------------------- |
-| `npm run dev`         | Vite dev server + Worker               |
-| `npm run dev:e2e`     | Dev server forced to fake Artifacts    |
-| `npm run build`       | Production build into `dist/`          |
-| `npm run typecheck`   | `tsc --noEmit`                         |
-| `npm run lint`        | oxlint                                 |
-| `npm test`            | Vitest unit + integration suite        |
-| `npm run db:generate` | Generate a Drizzle migration           |
-| `npm run db:migrate`  | Apply migrations                       |
-| `npm run db:reset`    | Destructive local-only reset + migrate |
-| `npm run db:studio`   | Drizzle Studio                         |
+| Command               | Purpose                                     |
+| --------------------- | ------------------------------------------- |
+| `npm run setup`       | Log in to Cloudflare and write local config |
+| `npm run dev`         | Apply remote D1 migrations and start Vite   |
+| `npm run dev:e2e`     | Dev server forced to fake Artifacts         |
+| `npm run build`       | Production build into `dist/`               |
+| `npm run typecheck`   | `tsc --noEmit`                              |
+| `npm run lint`        | oxlint                                      |
+| `npm test`            | Vitest unit + integration suite             |
+| `npm run db:generate` | Generate a Drizzle SQLite migration         |
+| `npm run db:migrate`  | Apply migrations to remote D1               |
+| `npm run deploy`      | Build and deploy with the setup URL         |
+| `npm run db:studio`   | Drizzle Studio                              |
 
 ## Configuration and deployment
 
-1. **Create the production database and Hyperdrive config.** Caching should be
-   disabled initially so reads are immediately consistent with writes:
+1. **Run `npm run setup`.** It selects the logged-in Cloudflare account, then
+   asks for the worker name (default `cloudflare-git`), the app name shown in
+   the UI (default `Cloudflare Git`), the D1 database name, the Artifacts
+   namespace, an optional custom domain, and the public URL. Binding name stays
+   `DB`. Do not enable D1 read replication. Setup reuses a database with the
+   same name and creates one otherwise.
+
+2. **Apply migrations** to that remote database. Setup can do this, and
+   `npm run dev` does it again. There is no separate local copy.
 
    ```bash
-   npx wrangler hyperdrive create deesha-git-db \
-     --caching-disabled \
-     --connection-string="postgres://USER:PASSWORD@HOST:5432/DB"
+   npm run db:migrate
    ```
 
-   Put the returned ID into `wrangler.jsonc` (`hyperdrive[0].id`). Keep the
-   local connection string for local development.
+   Backups: `npx wrangler d1 export <database-name> --remote --output backup.sql`.
+   D1 Time Travel can restore a remote database to an earlier bookmark. Git
+   objects are not in that export; they stay in the Artifacts namespace from
+   setup.
 
-2. **Apply migrations directly to the managed database before deploying.** Do
-   not use Hyperdrive for migrations:
-
-   ```bash
-   DATABASE_URL="postgres://..." npx drizzle-kit migrate
-   ```
-
-3. **Set production secrets.** The `deploy` script injects the production
-   `APP_URL`, `BETTER_AUTH_URL`, and `ENVIRONMENT` values, so the local defaults
-   in `wrangler.jsonc` do not leak into the deployment. `APP_URL` must be the
-   public HTTPS origin, including for the private-import proxy and Git proxy.
-   Then:
+3. **Set production secrets, then deploy.** `npm run deploy` injects the public
+   `APP_URL`, `BETTER_AUTH_URL`, `APP_NAME`, and `ENVIRONMENT=production`, so
+   the localhost defaults in `wrangler.jsonc` do not ship. `APP_URL` must be
+   the public HTTPS origin, including for the private-import proxy and Git
+   proxy. Setup can deploy and copy secrets from `.dev.vars`, or you can do it
+   yourself:
 
    ```bash
    npx wrangler secret put BETTER_AUTH_SECRET
@@ -295,27 +311,27 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
    npm run deploy
    ```
 
-   Use the same `PROVIDER_TOKEN_KEY` value as local development. If it is
-   missing, the app falls back to `BETTER_AUTH_SECRET`; connections encrypted
-   with a different auth secret will fail to decrypt.
+   `wrangler secret put` publishes a Worker version. Use the same
+   `PROVIDER_TOKEN_KEY` value as local development. If it is missing, the app
+   falls back to `BETTER_AUTH_SECRET`; connections encrypted with a different
+   auth secret will fail to decrypt.
 
-   Do not set `DATABASE_URL` as a production secret; deployed Workers use the
-   Hyperdrive binding. Do not deploy with `ARTIFACTS_FAKE=true` or
-   `GIT_PROVIDERS_FAKE=true`. The real binding requires the `ARTIFACTS` binding
-   and namespace configured in `wrangler.jsonc`. Set `GITLAB_BASE_URL` as a
-   Worker var only when importing from a self-hosted GitLab instance.
+   Do not deploy with `ARTIFACTS_FAKE=true` or `GIT_PROVIDERS_FAKE=true`. The
+   real binding requires the `ARTIFACTS` binding and namespace configured in
+   `wrangler.jsonc`. Set `GITLAB_BASE_URL` as a Worker var only when importing
+   from a self-hosted GitLab instance.
 
 4. **Verify the deployed pipeline.** Confirm `/api/health` and the SPA load on
-   the custom domain. Create a project, mint a write credential from Clone, clone
-   and push through the `https://git.deesha.tech/git/...` URL, and confirm the
-   repository page updates. Check the Workflow instance and the cron
-   reconciliation fallback. Merge a branch locally, push the target branch, and
-   confirm the MR is marked merged.
+   the public URL. Create a project, mint a write credential from Clone, clone
+   and push through `https://<your-host>/git/...`, and confirm the repository
+   page updates. Check the Workflow instance and the cron reconciliation
+   fallback. Merge a branch locally, push the target branch, and confirm the
+   MR is marked merged.
 
 ### Environment separation
 
-Use different Artifacts namespaces, Hyperdrive configs, PostgreSQL databases,
-and Workers for staging and production. The event trigger filters by namespace,
+Use different Artifacts namespaces, D1 databases, and Workers for staging and
+production. The event trigger filters by namespace,
 so do not share a namespace between environments.
 
 ## Roles

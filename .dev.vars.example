@@ -1,5 +1,6 @@
 # Local development secrets. Copy to .dev.vars and never commit it.
-DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DATABASE
+# Run `npm run setup` first. It logs into Cloudflare and writes wrangler.jsonc.
+# Collaboration data lives in the remote D1 database from that setup.
 BETTER_AUTH_SECRET=replace-with-openssl-rand-base64-32
 # Use the same value locally and in every deployed environment. Provider
 # tokens stored in the shared database cannot be decrypted without it.

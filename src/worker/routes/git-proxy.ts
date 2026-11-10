@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { projects } from "@db/schema";
+import { configuredAppName } from "@shared/constants";
 import type { AppEnv } from "@worker/env";
 
 export const gitProxyRoutes = new Hono<AppEnv>();
@@ -88,7 +89,7 @@ async function handleGitProxy(c: Context<AppEnv>): Promise<Response> {
 
   if (!c.req.header("authorization")) {
     return proxyError("Authentication required", 401, {
-      "WWW-Authenticate": 'Basic realm="Deesha Git"',
+      "WWW-Authenticate": `Basic realm="${configuredAppName(c.env.APP_NAME)}"`,
     });
   }
 

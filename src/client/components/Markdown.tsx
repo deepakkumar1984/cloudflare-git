@@ -13,7 +13,7 @@ export function Markdown({
   className?: string;
 }) {
   return (
-    <div className={cn("prose-deesha", className)}>
+    <div className={cn("prose-md", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSanitize, rehypeHighlight]}

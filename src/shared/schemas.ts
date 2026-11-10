@@ -274,6 +274,8 @@ export const paginationSchema = z.object({
 });
 
 export const searchSchema = z.object({
+  // Queries longer than this are accepted and then truncated to 48 UTF-8
+  // bytes so the LIKE pattern stays within D1's 50-byte limit.
   q: z.string().trim().min(1).max(200),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });

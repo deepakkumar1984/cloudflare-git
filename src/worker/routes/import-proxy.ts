@@ -7,6 +7,7 @@ import {
 } from "@db/schema";
 import {
   IMPORT_PROXY_MAX_REQUESTS_PER_MINUTE,
+  IMPORT_TOKEN_PREFIX,
   type GitProvider,
 } from "@shared/constants";
 import type { AppEnv } from "@worker/env";
@@ -19,7 +20,7 @@ import {
 
 export const importProxyRoutes = new Hono<AppEnv>();
 
-const TOKEN_RE = /^deesha_import_[A-Za-z0-9_-]{43}$/;
+const TOKEN_RE = new RegExp(`^${IMPORT_TOKEN_PREFIX}[A-Za-z0-9_-]{43}$`);
 
 function proxyError(message: string, status: number): Response {
   return new Response(message, {
@@ -151,7 +152,7 @@ async function handleProxy(c: Context<AppEnv>) {
       row.session.provider as GitProvider,
       providerToken
     ),
-    "User-Agent": "Deesha-Git-Import-Proxy",
+    "User-Agent": "cloudflare-git",
   });
   for (const name of ["accept", "content-type", "git-protocol"]) {
     const value = c.req.header(name);

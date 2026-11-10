@@ -1,41 +1,41 @@
 import { describe, expect, it } from "vitest";
 import { publicGitRemote } from "@worker/services/public-remote";
 
+const account = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const app = "https://git.example.com";
+
 describe("publicGitRemote", () => {
   it("moves Artifacts remotes onto the app origin and keeps the path", () => {
     expect(
       publicGitRemote(
-        "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.artifacts.cloudflare.net/git/deesha-git/p-0123456789ab.git",
-        "https://git.deesha.tech"
+        `https://${account}.artifacts.cloudflare.net/git/cloudflare-git/p-0123456789ab.git`,
+        app
       )
-    ).toBe("https://git.deesha.tech/git/deesha-git/p-0123456789ab.git");
+    ).toBe(`${app}/git/cloudflare-git/p-0123456789ab.git`);
   });
 
   it("leaves fake and non-Artifacts remotes alone", () => {
     expect(
       publicGitRemote(
-        "https://fake-artifacts.local/git/deesha-git/p-0123456789ab.git",
-        "https://git.deesha.tech"
+        "https://fake-artifacts.local/git/cloudflare-git/p-0123456789ab.git",
+        app
       )
-    ).toBe("https://fake-artifacts.local/git/deesha-git/p-0123456789ab.git");
-    expect(
-      publicGitRemote(
-        "https://github.com/owner/repo.git",
-        "https://git.deesha.tech"
-      )
-    ).toBe("https://github.com/owner/repo.git");
+    ).toBe(
+      "https://fake-artifacts.local/git/cloudflare-git/p-0123456789ab.git"
+    );
+    expect(publicGitRemote("https://github.com/owner/repo.git", app)).toBe(
+      "https://github.com/owner/repo.git"
+    );
   });
 
   it("keeps null and malformed remotes unchanged", () => {
-    expect(publicGitRemote(null, "https://git.deesha.tech")).toBeNull();
-    expect(publicGitRemote("not a url", "https://git.deesha.tech")).toBe(
-      "not a url"
-    );
+    expect(publicGitRemote(null, app)).toBeNull();
+    expect(publicGitRemote("not a url", app)).toBe("not a url");
   });
 
   it("does not rewrite when the app URL is invalid", () => {
     const remote =
-      "https://acct.artifacts.cloudflare.net/git/deesha-git/p-0123456789ab.git";
+      "https://acct.artifacts.cloudflare.net/git/cloudflare-git/p-0123456789ab.git";
     expect(publicGitRemote(remote, "not a url")).toBe(remote);
   });
 });

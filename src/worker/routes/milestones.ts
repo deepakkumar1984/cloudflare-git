@@ -75,7 +75,7 @@ milestoneRoutes.post(
         201
       );
     } catch (error) {
-      if (isUniqueViolation(error, "milestones_project_title_uq")) {
+      if (isUniqueViolation(error, "milestones.project_id, milestones.title")) {
         throw conflict("A milestone with that name already exists");
       }
       throw error;
@@ -114,7 +114,7 @@ milestoneRoutes.patch(
       if (!milestone) throw notFound("Milestone not found");
       return c.json({ milestone });
     } catch (error) {
-      if (isUniqueViolation(error, "milestones_project_title_uq")) {
+      if (isUniqueViolation(error, "milestones.project_id, milestones.title")) {
         throw conflict("A milestone with that name already exists");
       }
       throw error;

@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { username } from "better-auth/plugins";
 import type { Database } from "@db/client";
 import * as schema from "@db/schema";
-import { USERNAME_RE } from "@shared/constants";
+import { USERNAME_RE, configuredAppName } from "@shared/constants";
 import { ensurePersonalGroup } from "@worker/services/personal-groups";
 
 export function createAuth(db: Database, env: Env) {
@@ -22,7 +22,7 @@ export function createAuth(db: Database, env: Env) {
   );
 
   return betterAuth({
-    appName: "Deesha Git",
+    appName: configuredAppName(env.APP_NAME),
     baseURL: env.BETTER_AUTH_URL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
@@ -35,7 +35,7 @@ export function createAuth(db: Database, env: Env) {
       ]),
     ].filter(Boolean),
     database: drizzleAdapter(db, {
-      provider: "pg",
+      provider: "sqlite",
       schema,
     }),
     emailAndPassword: {

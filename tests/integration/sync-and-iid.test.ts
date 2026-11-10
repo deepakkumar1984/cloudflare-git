@@ -102,9 +102,7 @@ async function reloadMergeRequest(iid: number) {
 describe("project IID allocation", () => {
   it("allocates unique, contiguous IIDs under concurrency", async () => {
     const values = await Promise.all(
-      Array.from({ length: 20 }, () =>
-        db.transaction((tx) => allocateIid(tx, project.id))
-      )
+      Array.from({ length: 20 }, () => allocateIid(db, project.id))
     );
     expect([...values].sort((a, b) => a - b)).toEqual(
       Array.from({ length: 20 }, (_, index) => index + 1)

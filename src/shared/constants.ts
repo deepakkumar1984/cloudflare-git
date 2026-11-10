@@ -1,3 +1,13 @@
+export const DEFAULT_APP_NAME = "Cloudflare Git";
+export const THEME_STORAGE_KEY = "cloudflare-git-theme";
+export const LEGACY_THEME_STORAGE_KEY = "deesha-theme";
+export const IMPORT_TOKEN_PREFIX = "cf_git_import_";
+
+export function configuredAppName(value: string | undefined): string {
+  const name = value?.trim();
+  return name || DEFAULT_APP_NAME;
+}
+
 export const ROLES = [
   "guest",
   "reporter",

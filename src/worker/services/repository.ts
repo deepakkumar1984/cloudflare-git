@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { chunkRows, COMMIT_UPSERT_BATCH_ROWS, writeBatch } from "@db/batch";
 import type { Database } from "@db/client";
 import { gitCommits, gitRefs, projects, type Project } from "@db/schema";
 import {
@@ -74,37 +75,40 @@ export async function upsertCommits(
   commits: CommitMetadataInput[]
 ): Promise<void> {
   if (commits.length === 0) return;
-  await db
-    .insert(gitCommits)
-    .values(
-      commits.map((commit) => ({
-        projectId,
-        sha: commit.hash,
-        treeSha: commit.treeHash ?? "",
-        message: commit.message,
-        authorName: commit.author.name,
-        authorEmail: commit.author.email,
-        committerName: commit.committer.name,
-        committerEmail: commit.committer.email,
-        authoredAt: commit.authoredAt,
-        committedAt: commit.committedAt,
-        parents: commit.parents,
-      }))
-    )
-    .onConflictDoUpdate({
-      target: [gitCommits.projectId, gitCommits.sha],
-      set: {
-        treeSha: sql`coalesce(nullif(excluded.tree_sha, ''), ${gitCommits.treeSha})`,
-        message: sql`excluded.message`,
-        authorName: sql`excluded.author_name`,
-        authorEmail: sql`excluded.author_email`,
-        committerName: sql`excluded.committer_name`,
-        committerEmail: sql`excluded.committer_email`,
-        authoredAt: sql`excluded.authored_at`,
-        committedAt: sql`excluded.committed_at`,
-        parents: sql`excluded.parents`,
-      },
-    });
+  const statements = chunkRows(commits, COMMIT_UPSERT_BATCH_ROWS).map((chunk) =>
+    db
+      .insert(gitCommits)
+      .values(
+        chunk.map((commit) => ({
+          projectId,
+          sha: commit.hash,
+          treeSha: commit.treeHash ?? "",
+          message: commit.message,
+          authorName: commit.author.name,
+          authorEmail: commit.author.email,
+          committerName: commit.committer.name,
+          committerEmail: commit.committer.email,
+          authoredAt: commit.authoredAt,
+          committedAt: commit.committedAt,
+          parents: commit.parents,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [gitCommits.projectId, gitCommits.sha],
+        set: {
+          treeSha: sql`coalesce(nullif(excluded.tree_sha, ''), ${gitCommits.treeSha})`,
+          message: sql`excluded.message`,
+          authorName: sql`excluded.author_name`,
+          authorEmail: sql`excluded.author_email`,
+          committerName: sql`excluded.committer_name`,
+          committerEmail: sql`excluded.committer_email`,
+          authoredAt: sql`excluded.authored_at`,
+          committedAt: sql`excluded.committed_at`,
+          parents: sql`excluded.parents`,
+        },
+      })
+  );
+  await writeBatch(db, statements);
 }
 
 export function validateRef(ref: string): string {

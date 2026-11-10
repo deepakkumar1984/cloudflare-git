@@ -1,6 +1,7 @@
+// Shape written by `npm run setup`. The database id below is a placeholder. Do not deploy this file.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "deesha-git",
+  "name": "cloudflare-git",
   "main": "./src/worker/index.ts",
   "compatibility_date": "2026-11-10",
   "compatibility_flags": ["nodejs_compat"],
@@ -11,33 +12,31 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/git/*"],
   },
-  "routes": [
-    {
-      "pattern": "git.deesha.tech",
-      "custom_domain": true,
-    },
-  ],
   "vars": {
+    "APP_NAME": "Cloudflare Git",
     "APP_URL": "http://localhost:5173",
-    "ARTIFACTS_NAMESPACE": "deesha-git",
+    "ARTIFACTS_NAMESPACE": "cloudflare-git",
     "ENVIRONMENT": "development",
   },
   "artifacts": [
     {
       "binding": "ARTIFACTS",
-      "namespace": "deesha-git",
+      "namespace": "cloudflare-git",
       "remote": true,
     },
   ],
-  "hyperdrive": [
+  "d1_databases": [
     {
-      "binding": "HYPERDRIVE",
-      "id": "00000000000000000000000000000000",
+      "binding": "DB",
+      "database_name": "cloudflare-git",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "src/db/migrations",
+      "remote": true,
     },
   ],
   "workflows": [
     {
-      "name": "deesha-git-push-sync",
+      "name": "cloudflare-git-push-sync",
       "binding": "PUSH_SYNC",
       "class_name": "PushSyncWorkflow",
     },
@@ -48,12 +47,12 @@
       {
         "type": "cf.artifacts.repo.pushed",
         "filter": {
-          "namespace": "deesha-git",
+          "namespace": "cloudflare-git",
         },
         "targets": [
           {
             "type": "workflow",
-            "workflow_name": "deesha-git-push-sync",
+            "workflow_name": "cloudflare-git-push-sync",
           },
         ],
       },

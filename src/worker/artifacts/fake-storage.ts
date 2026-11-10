@@ -64,7 +64,7 @@ class FakeRepo implements ArtifactsRepoLike {
       lastPushAt: null,
       source: null,
       readOnly: false,
-      remote: `https://fake-artifacts.local/git/deesha-git/${name}.git`,
+      remote: `https://fake-artifacts.local/git/${storage.namespace}/${name}.git`,
     };
   }
 
@@ -198,6 +198,8 @@ class FakeRepo implements ArtifactsRepoLike {
 
 export class FakeGitStorage implements GitStorage {
   readonly repos = new Map<string, FakeRepo>();
+
+  constructor(readonly namespace = "cloudflare-git") {}
 
   async createRepository(
     name: string,
@@ -353,7 +355,7 @@ export class FakeGitStorage implements GitStorage {
     const ref = `refs/heads/${branch}`;
     const timestamp = options.timestamp ?? Math.floor(Date.now() / 1000);
     const author = options.author ?? {
-      name: "Deesha Developer",
+      name: "Cloudflare Git",
       email: "developer@example.com",
     };
 
@@ -459,7 +461,9 @@ export class FakeGitStorage implements GitStorage {
 
 let singleton: FakeGitStorage | undefined;
 
-export function getFakeGitStorage(): FakeGitStorage {
-  singleton ??= new FakeGitStorage();
+export function getFakeGitStorage(
+  namespace = "cloudflare-git"
+): FakeGitStorage {
+  singleton ??= new FakeGitStorage(namespace);
   return singleton;
 }

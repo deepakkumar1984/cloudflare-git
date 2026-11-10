@@ -24,6 +24,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
+import { useAppName } from "@/lib/meta";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -217,6 +218,7 @@ export function MergeRequestDetailPage() {
   const iidNumber = Number(iid);
   const context = useProjectContext();
   const me = useMe();
+  const appName = useAppName();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("tab");
@@ -1015,8 +1017,8 @@ export function MergeRequestDetailPage() {
                   {mergeCommands}
                 </pre>
                 <p className="mt-2 text-[10px] leading-4 text-faint">
-                  There is no server-side merge. Push the target branch and
-                  Deesha detects fast-forward and merge-commit results.
+                  There is no server-side merge. Push the target branch and{" "}
+                  {appName} detects fast-forward and merge-commit results.
                 </p>
               </div>
             ) : mr.state === "merged" ? (

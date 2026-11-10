@@ -1,5 +1,5 @@
 import type { MiddlewareHandler } from "hono";
-import { createDatabase, resolveDatabaseConnectionString } from "@db/client";
+import { createDatabase } from "@db/client";
 import { isArtifactsErrorCode } from "@worker/artifacts/types";
 import { createAuth } from "@worker/auth";
 import type { AppEnv } from "@worker/env";
@@ -52,19 +52,10 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
 };
 
 export const requestContext: MiddlewareHandler<AppEnv> = async (c, next) => {
-  const handle = createDatabase(resolveDatabaseConnectionString(c.env));
-  c.set("db", handle.db);
-  c.set("sql", handle.sql);
-  c.set("auth", createAuth(handle.db, c.env));
-  try {
-    await next();
-  } finally {
-    try {
-      c.executionCtx.waitUntil(handle.close());
-    } catch {
-      await handle.close().catch(() => undefined);
-    }
-  }
+  const db = createDatabase(c.env.DB);
+  c.set("db", db);
+  c.set("auth", createAuth(db, c.env));
+  await next();
 };
 
 export const sessionMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {

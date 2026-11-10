@@ -14,6 +14,7 @@ import {
 import { useCallback, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authClient } from "@/lib/auth";
+import { useAppName } from "@/lib/meta";
 import { useMe } from "@/lib/queries";
 import type { GroupSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,7 @@ function GroupLink({
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const appName = useAppName();
   const { data, isLoading } = useMe();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -91,10 +93,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         >
           <img src="/mark.svg" alt="" className="size-8 rounded-[9px]" />
           <span className="font-display text-[22px] font-semibold leading-none tracking-[-0.03em] text-ink">
-            Deesha
-          </span>
-          <span className="mb-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-faint">
-            git
+            {appName}
           </span>
         </NavLink>
       </div>
@@ -209,6 +208,7 @@ function isProjectRoute(pathname: string) {
 }
 
 export function AppShell() {
+  const appName = useAppName();
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeMobile = useCallback(() => setMobileOpen(false), []);
   const location = useLocation();
@@ -232,7 +232,7 @@ export function AppShell() {
           <NavLink to="/" className="flex items-center gap-2">
             <img src="/mark.svg" alt="" className="size-7 rounded-lg" />
             <span className="font-display text-lg font-semibold tracking-tight">
-              Deesha
+              {appName}
             </span>
           </NavLink>
           <ThemeToggle />

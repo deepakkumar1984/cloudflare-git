@@ -6,7 +6,6 @@ import {
   closeTestDatabase,
   getTestDatabase,
   resetDatabase,
-  testDatabaseUrl,
 } from "../helpers/db";
 
 const origin = "http://localhost:5173";
@@ -17,14 +16,14 @@ beforeEach(async () => {
   await resetDatabase();
   app = createApp();
   env = {
-    HYPERDRIVE: { connectionString: testDatabaseUrl },
+    DB: (await getTestDatabase()).d1,
     BETTER_AUTH_SECRET: "test-secret-".repeat(4),
     PROVIDER_TOKEN_KEY: "test-provider-key-".repeat(3),
     BETTER_AUTH_URL: origin,
     APP_URL: origin,
     ADMIN_EMAILS: "",
     ARTIFACTS_FAKE: "true",
-    ARTIFACTS_NAMESPACE: "deesha-git",
+    ARTIFACTS_NAMESPACE: "cloudflare-git",
     ENVIRONMENT: "development",
   } as unknown as Env;
 });

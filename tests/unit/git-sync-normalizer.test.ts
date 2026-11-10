@@ -17,7 +17,7 @@ const innerPayload = {
   after: "b".repeat(40),
   commits: [commit],
   commitsTruncated: true,
-  source: { namespace: "deesha-git", repoName: "p-abc123" },
+  source: { namespace: "cloudflare-git", repoName: "p-abc123" },
   metadata: { eventTimestamp: "2026-01-02T00:00:00.000Z" },
 };
 
@@ -34,7 +34,7 @@ describe("normalizePushEvent", () => {
     });
     expect(event).not.toBeNull();
     expect(event).toMatchObject({
-      namespace: "deesha-git",
+      namespace: "cloudflare-git",
       repoName: "p-abc123",
       ref: "refs/heads/main",
       before: "a".repeat(40),

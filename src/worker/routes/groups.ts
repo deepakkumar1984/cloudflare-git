@@ -104,11 +104,13 @@ groupRoutes.post("/groups", async (c) => {
   const db = c.get("db");
   const input = await readJson(c, groupCreateSchema);
 
+  const groupId = crypto.randomUUID();
   try {
-    const group = await db.transaction(async (tx) => {
-      const [created] = await tx
+    const [createdRows] = await db.batch([
+      db
         .insert(groups)
         .values({
+          id: groupId,
           slug: input.slug,
           name: input.name,
           description: input.description,
@@ -116,15 +118,15 @@ groupRoutes.post("/groups", async (c) => {
           personal: false,
           createdBy: session.user.id,
         })
-        .returning();
-      if (!created) throw new Error("Could not create group");
-      await tx.insert(groupMembers).values({
-        groupId: created.id,
+        .returning(),
+      db.insert(groupMembers).values({
+        groupId,
         userId: session.user.id,
         role: "owner",
-      });
-      return created;
-    });
+      }),
+    ]);
+    const group = createdRows[0];
+    if (!group) throw new Error("Could not create group");
 
     await recordEvent(db, {
       groupId: group.id,
@@ -137,7 +139,7 @@ groupRoutes.post("/groups", async (c) => {
 
     return c.json({ group: groupSummary(group, "owner") }, 201);
   } catch (error) {
-    if (isUniqueViolation(error, "groups_slug_uq")) {
+    if (isUniqueViolation(error, "groups.slug")) {
       throw conflict("That group path is already taken");
     }
     throw error;
@@ -355,7 +357,9 @@ groupRoutes.post("/groups/:groupSlug/members", loadGroup, async (c) => {
       201
     );
   } catch (error) {
-    if (isUniqueViolation(error, "group_members_group_user_uq")) {
+    if (
+      isUniqueViolation(error, "group_members.group_id, group_members.user_id")
+    ) {
       throw conflict("That user is already a member");
     }
     throw error;
@@ -503,20 +507,28 @@ groupRoutes.post("/groups/:groupSlug/projects", loadGroup, async (c) => {
 
   const db = c.get("db");
   const storage = getGitStorage(c.env);
-  const project = await createProject(
-    db,
-    storage,
-    c.env,
-    { id: session.user.id },
-    {
-      groupId: group.id,
-      slug: input.slug,
-      name: input.name,
-      description: input.description,
-      visibility: input.visibility,
-      defaultBranch: input.defaultBranch,
+  let project: Awaited<ReturnType<typeof createProject>>;
+  try {
+    project = await createProject(
+      db,
+      storage,
+      c.env,
+      { id: session.user.id },
+      {
+        groupId: group.id,
+        slug: input.slug,
+        name: input.name,
+        description: input.description,
+        visibility: input.visibility,
+        defaultBranch: input.defaultBranch,
+      }
+    );
+  } catch (error) {
+    if (isUniqueViolation(error, "projects.group_id, projects.slug")) {
+      throw conflict("That project path is already taken");
     }
-  );
+    throw error;
+  }
 
   return c.json(
     {

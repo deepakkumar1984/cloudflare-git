@@ -15,7 +15,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
-    // Integration tests share one PostgreSQL database and truncate between
+    // Integration tests share one in-memory D1 database and clear it between
     // tests, so files must not run concurrently.
     fileParallelism: false,
     testTimeout: 20_000,
