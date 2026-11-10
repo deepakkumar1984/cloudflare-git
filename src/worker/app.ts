@@ -10,6 +10,7 @@ import {
   sessionMiddleware,
 } from "./middleware/context";
 import { mountApiRoutes } from "./routes";
+import { gitProxyRoutes } from "./routes/git-proxy";
 import { importProxyRoutes } from "./routes/import-proxy";
 import { AppError } from "./lib/errors";
 
@@ -59,6 +60,13 @@ export function createApp() {
   // must run before session and CSRF middleware. The opaque path token is the
   // only credential; it is short-lived and scoped to one import.
   app.route("/api/v1/import-proxy", importProxyRoutes);
+
+  // Public clone/push URLs on the app's own domain. Git clients authenticate
+  // with Artifacts tokens, not browser sessions or CSRF tokens, so this sits
+  // outside the API middleware. The proxy only forwards smart-HTTP operations
+  // and validates the repository path against the database.
+  app.use("/git/*", requestIdMiddleware, securityHeaders, requestContext);
+  app.route("/git", gitProxyRoutes);
 
   app.all("/api/auth/*", (c) => c.get("auth").handler(c.req.raw));
 

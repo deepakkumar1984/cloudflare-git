@@ -11,7 +11,7 @@ export function RepositoryCommitPage() {
   const commit = useRepositoryCommit(groupSlug, projectSlug, sha);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5">
+    <div className="space-y-4">
       <Link
         to={`/groups/${groupSlug}/${projectSlug}/repository/commits`}
         className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted hover:text-ink"

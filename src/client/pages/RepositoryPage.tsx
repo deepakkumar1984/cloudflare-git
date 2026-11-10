@@ -10,7 +10,6 @@ import {
   GitBranch,
   Image as ImageIcon,
   Loader2,
-  RefreshCw,
   Sparkles,
 } from "lucide-react";
 import {
@@ -31,7 +30,6 @@ import {
   useRepositoryTree,
 } from "@/lib/queries";
 import { relativeTime } from "@/lib/utils";
-import { useProjectContext } from "./ProjectLayout";
 
 function FileGlyph({ name, directory }: { name: string; directory: boolean }) {
   if (directory) return <Folder className="size-4 text-accent" />;
@@ -58,7 +56,6 @@ function FileGlyph({ name, directory }: { name: string; directory: boolean }) {
 
 export function RepositoryPage() {
   const { groupSlug = "", projectSlug = "" } = useParams();
-  const data = useProjectContext();
   const projectQuery = useProject(groupSlug, projectSlug);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -98,18 +95,6 @@ export function RepositoryPage() {
     ]);
   }
 
-  const refresh = useMutation({
-    mutationFn: () =>
-      api.post(
-        `/groups/${groupSlug}/projects/${projectSlug}/repository/refresh`
-      ),
-    onSuccess: async () => {
-      toast.success("Refs refreshed from Artifacts");
-      await invalidateRepo();
-    },
-    onError: (error) => toast.error(errorMessage(error)),
-  });
-
   const seed = useMutation({
     mutationFn: () =>
       api.post(
@@ -134,7 +119,7 @@ export function RepositoryPage() {
       <div className="rounded-xl border border-dashed border-line px-6 py-16 text-center">
         <p className="text-sm font-semibold">Could not load the repository</p>
         <p className="mt-1 text-[13px] text-muted">
-          Try refreshing refs, or check that repository setup succeeded.
+          Check that repository setup succeeded.
         </p>
       </div>
     );
@@ -149,24 +134,9 @@ export function RepositoryPage() {
         <p className="mx-auto mt-1 max-w-md text-[13px] leading-6 text-muted">
           Push a first commit to{" "}
           <code className="font-mono">{repo?.defaultBranch || "main"}</code>{" "}
-          using a write credential from the Clone dialog, or refresh refs if you
-          already pushed.
+          using a write credential from the Clone dialog.
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-          {data.canManageSettings ? (
-            <Button
-              variant="secondary"
-              onClick={() => refresh.mutate()}
-              disabled={refresh.isPending}
-            >
-              {refresh.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <RefreshCw className="size-4" />
-              )}
-              Refresh refs
-            </Button>
-          ) : null}
           {import.meta.env.DEV ? (
             <Button
               variant="ghost"
@@ -212,31 +182,13 @@ export function RepositoryPage() {
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <Button asChild variant="ghost" size="sm">
-                <Link
-                  to={`/groups/${groupSlug}/${projectSlug}/repository/commits?ref=${encodeURIComponent(branch)}`}
-                >
-                  Commits
-                </Link>
-              </Button>
-              {data.canManageSettings ? (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => refresh.mutate()}
-                  disabled={refresh.isPending}
-                  aria-label="Refresh refs"
-                  title="Refresh refs"
-                >
-                  {refresh.isPending ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="size-3.5" />
-                  )}
-                </Button>
-              ) : null}
-            </div>
+            <Button asChild variant="ghost" size="sm">
+              <Link
+                to={`/groups/${groupSlug}/${projectSlug}/repository/commits?ref=${encodeURIComponent(branch)}`}
+              >
+                Commits
+              </Link>
+            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-1 border-b border-line bg-canvas/40 px-4 py-2 font-mono text-[11px] text-muted">
@@ -274,7 +226,7 @@ export function RepositoryPage() {
             </div>
           ) : tree.error ? (
             <div className="px-5 py-12 text-center text-[13px] text-muted">
-              This path could not be loaded. Refresh refs and try again.
+              This path could not be loaded.
             </div>
           ) : (
             <div className="divide-y divide-line">

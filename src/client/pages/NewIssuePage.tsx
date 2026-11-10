@@ -106,17 +106,7 @@ export function NewIssuePage() {
         Issues
       </Link>
 
-      <header className="mb-6">
-        <p className="mono-label mb-2">New issue</p>
-        <h1 className="font-display text-[34px] leading-none tracking-[-0.04em]">
-          Describe the work.
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          Use markdown for detail and{" "}
-          <code className="font-mono text-[11px]">- [ ]</code> for checklist
-          items.
-        </p>
-      </header>
+      <h1 className="mb-5 text-lg font-semibold tracking-tight">New issue</h1>
 
       <form
         onSubmit={submit}

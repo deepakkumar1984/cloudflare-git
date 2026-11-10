@@ -187,17 +187,9 @@ export function BoardPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="mono-label mb-2">Board</p>
-          <h1 className="font-display text-[34px] leading-none tracking-[-0.04em]">
-            Move work forward.
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            Cards are open issues grouped by their board label.
-          </p>
-        </div>
+    <div className="flex min-h-[calc(100dvh-8.5rem)] flex-col gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-base font-semibold tracking-tight">Board</h1>
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
             <Link to={`${base}/issues`}>List view</Link>
@@ -223,8 +215,8 @@ export function BoardPage() {
         </div>
       </header>
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
-        <div className="flex min-h-[420px] gap-4">
+      <div className="min-h-0 flex-1 overflow-x-auto pb-2">
+        <div className="flex h-full min-h-[24rem] gap-3">
           {board.data.lists.map((list) => (
             <div
               key={list.id}

@@ -103,21 +103,14 @@ export function GroupSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <header>
-        <Link
-          to={`/groups/${groupSlug}`}
-          className="font-mono text-[11px] text-muted hover:text-ink"
-        >
-          {groupSlug}
+    <div className="mx-auto w-full max-w-3xl space-y-5">
+      <h1 className="text-lg font-semibold tracking-tight">
+        <Link to={`/groups/${groupSlug}`} className="text-muted hover:text-ink">
+          {group.name}
         </Link>
-        <h1 className="mt-2 font-display text-[36px] leading-none tracking-[-0.04em]">
-          Group settings
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          Paths stay stable; display names can change freely.
-        </p>
-      </header>
+        <span className="mx-1.5 text-faint">/</span>
+        Settings
+      </h1>
 
       {group.archivedAt ? (
         <div className="rounded-lg border border-red/20 bg-red-soft px-4 py-3 text-[13px] text-red">

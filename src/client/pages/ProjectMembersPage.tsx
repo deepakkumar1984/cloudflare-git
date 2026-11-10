@@ -82,16 +82,9 @@ export function ProjectMembersPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <h1 className="font-display text-[34px] leading-none tracking-[-0.04em]">
-            Project members
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            Effective access combines project membership and group inheritance.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-base font-semibold tracking-tight">Members</h1>
         {canManage ? (
           <Button variant="primary" onClick={() => setAddOpen(true)}>
             <Plus className="size-4" />

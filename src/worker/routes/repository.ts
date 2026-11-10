@@ -7,6 +7,7 @@ import { getGitStorage } from "@worker/artifacts";
 import type { AppEnv } from "@worker/env";
 import { assertRole, loadProject } from "@worker/services/access";
 import { recordEvent } from "@worker/services/events";
+import { publicGitRemote } from "@worker/services/public-remote";
 import {
   getBlob,
   getBranches,
@@ -55,7 +56,7 @@ repositoryRoutes.get(
     return c.json({
       defaultBranch: project.defaultBranch,
       provisioningState: project.provisioningState,
-      remote: project.artifactsRemote,
+      remote: publicGitRemote(project.artifactsRemote, c.env.APP_URL),
       branches,
       isEmpty: branches.length === 0,
     });

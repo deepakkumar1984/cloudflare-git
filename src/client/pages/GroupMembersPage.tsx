@@ -93,22 +93,18 @@ export function GroupMembersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-lg font-semibold tracking-tight">
           <Link
             to={`/groups/${groupSlug}`}
-            className="font-mono text-[11px] text-muted hover:text-ink"
+            className="text-muted hover:text-ink"
           >
-            {groupSlug}
+            {group?.name || groupSlug}
           </Link>
-          <h1 className="mt-2 font-display text-[36px] leading-none tracking-[-0.04em]">
-            Members
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            Group roles are inherited by every project in {group?.name}.
-          </p>
-        </div>
+          <span className="mx-1.5 text-faint">/</span>
+          Members
+        </h1>
         {canManage && !personal ? (
           <Button variant="primary" onClick={() => setAddOpen(true)}>
             <Plus className="size-4" />

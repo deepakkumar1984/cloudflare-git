@@ -88,16 +88,8 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-7">
-      <header>
-        <p className="mono-label mb-3">Settings</p>
-        <h1 className="font-display text-[38px] leading-none tracking-[-0.04em]">
-          Your account.
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
-          Identity, password, and display preferences for this instance.
-        </p>
-      </header>
+    <div className="mx-auto w-full max-w-3xl space-y-5">
+      <h1 className="text-lg font-semibold tracking-tight">Account</h1>
 
       <Card>
         <CardHeader className="flex flex-row items-center gap-3">

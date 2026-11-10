@@ -136,13 +136,9 @@ export function NewMergeRequestPage() {
           <ArrowLeft className="size-3.5" />
           Merge requests
         </Link>
-        <h1 className="mt-3 font-display text-[34px] leading-none tracking-[-0.04em]">
-          Open a merge request.
+        <h1 className="mt-3 text-lg font-semibold tracking-tight">
+          New merge request
         </h1>
-        <p className="mt-2 text-sm text-muted">
-          Review happens here. Merging stays in Git — the app detects
-          fast-forward and merge-commit pushes.
-        </p>
       </div>
 
       {repository.isLoading ? (
@@ -152,7 +148,7 @@ export function NewMergeRequestPage() {
           <GitBranch className="mx-auto size-6 text-faint" />
           <p className="mt-3 text-sm font-semibold">No branches synced yet</p>
           <p className="mt-1 text-[13px] text-muted">
-            Push your first branch, then refresh the repository.
+            Push a branch before opening a merge request.
           </p>
           <Button asChild variant="secondary" size="sm" className="mt-4">
             <Link to={`${base}/repository`}>Open repository</Link>

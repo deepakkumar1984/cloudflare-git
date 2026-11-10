@@ -41,6 +41,7 @@ import {
   revokeProjectTokens,
   revokeUserProjectTokens,
 } from "@worker/services/git-tokens";
+import { publicGitRemote } from "@worker/services/public-remote";
 import {
   projectVisibilityAllowed,
   provisionProject,
@@ -143,7 +144,10 @@ projectRoutes.get(
       },
       project: {
         ...projectSummary(project, role),
-        artifactsRemote: project.artifactsRemote,
+        artifactsRemote: publicGitRemote(
+          project.artifactsRemote,
+          c.env.APP_URL
+        ),
         openIssues: issueCount?.value ?? 0,
         openMergeRequests: mrCount?.value ?? 0,
         branches: branchCount?.value ?? 0,
@@ -399,7 +403,10 @@ projectRoutes.post(
       c.req.header("cf-connecting-ip")
     );
     c.header("Cache-Control", "no-store");
-    return c.json(credentials);
+    return c.json({
+      ...credentials,
+      remote: publicGitRemote(credentials.remote, c.env.APP_URL),
+    });
   }
 );
 

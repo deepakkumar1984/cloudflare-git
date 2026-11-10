@@ -1,17 +1,8 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  GitBranch,
-  Loader2,
-  RefreshCw,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, GitBranch } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { api, errorMessage } from "@/lib/api";
 import { useRepository, useRepositoryCommits } from "@/lib/queries";
 import type { RepositoryCommit } from "@/lib/types";
 import { dateTime, relativeTime } from "@/lib/utils";
@@ -62,32 +53,12 @@ export function RepositoryCommitsPage() {
   const context = useProjectContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [offset, setOffset] = useState(0);
-  const queryClient = useQueryClient();
   const summary = useRepository(groupSlug, projectSlug);
   const ref =
     searchParams.get("ref") ||
     summary.data?.defaultBranch ||
     context.project.defaultBranch;
   const commits = useRepositoryCommits(groupSlug, projectSlug, ref, offset);
-
-  const refresh = useMutation({
-    mutationFn: () =>
-      api.post(
-        `/groups/${groupSlug}/projects/${projectSlug}/repository/refresh`
-      ),
-    onSuccess: async () => {
-      toast.success("Refs refreshed");
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["repository", groupSlug, projectSlug],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["project", groupSlug, projectSlug],
-        }),
-      ]);
-    },
-    onError: (error) => toast.error(errorMessage(error)),
-  });
 
   return (
     <div className="space-y-4">
@@ -111,30 +82,13 @@ export function RepositoryCommitsPage() {
           </select>
           <Badge tone="outline">{context.project.name}</Badge>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Button asChild variant="ghost" size="sm">
-            <Link
-              to={`/groups/${groupSlug}/${projectSlug}/repository?ref=${encodeURIComponent(ref)}`}
-            >
-              Files
-            </Link>
-          </Button>
-          {context.canManageSettings ? (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => refresh.mutate()}
-              disabled={refresh.isPending}
-              aria-label="Refresh refs"
-            >
-              {refresh.isPending ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="size-3.5" />
-              )}
-            </Button>
-          ) : null}
-        </div>
+        <Button asChild variant="ghost" size="sm">
+          <Link
+            to={`/groups/${groupSlug}/${projectSlug}/repository?ref=${encodeURIComponent(ref)}`}
+          >
+            Files
+          </Link>
+        </Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
@@ -146,7 +100,7 @@ export function RepositoryCommitsPage() {
           </div>
         ) : commits.error ? (
           <p className="px-5 py-14 text-center text-[13px] text-muted">
-            Could not load commits. Refresh refs and try again.
+            Could not load commits.
           </p>
         ) : commits.data?.commits.length === 0 ? (
           <p className="px-5 py-14 text-center text-[13px] text-muted">

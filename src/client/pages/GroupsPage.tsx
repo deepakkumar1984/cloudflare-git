@@ -23,18 +23,9 @@ export function GroupsPage() {
   }, [groups, query]);
 
   return (
-    <div className="space-y-7">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="mono-label mb-3">Groups</p>
-          <h1 className="font-display text-[38px] leading-none tracking-[-0.04em]">
-            Where work is organized.
-          </h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
-            Every project belongs to a group. Groups carry membership and roles
-            down into their projects.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <header className="flex items-center justify-between gap-3">
+        <h1 className="text-lg font-semibold tracking-tight">Groups</h1>
         <Button asChild variant="primary">
           <Link to="/groups/new">
             <Plus className="size-4" />

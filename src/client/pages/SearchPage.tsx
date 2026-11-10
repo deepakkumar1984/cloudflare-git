@@ -25,17 +25,8 @@ export function SearchPage() {
     (results.data?.mergeRequests.length ?? 0);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-7">
-      <header>
-        <p className="mono-label mb-3">Search</p>
-        <h1 className="font-display text-[38px] leading-none tracking-[-0.04em]">
-          Find work across projects.
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-muted">
-          Projects, issues, and merge requests you can access. Confidential
-          issues appear only with reporter access or higher.
-        </p>
-      </header>
+    <div className="space-y-4">
+      <h1 className="text-lg font-semibold tracking-tight">Search</h1>
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />

@@ -10,7 +10,8 @@ Artifacts stores the Git objects and refs.
 - Groups and projects with private/internal visibility
 - Five-level roles: guest, reporter, developer, maintainer, owner
 - Repository browser: branches, trees, blobs, raw downloads, commits, README
-- Clone/push with short-lived read or write Artifacts credentials
+- Clone/push with short-lived read or write Artifacts credentials, optionally
+  through the app's own custom domain via a streaming Git proxy
 - Issues, comments, markdown checklists, labels, milestones
 - Label-backed issue boards with drag-and-drop moves
 - Merge requests: create, review, approve/request changes, discussions,
@@ -32,7 +33,8 @@ Browser ──HTTP──> Worker (React SPA + Hono API) ──Hyperdrive──> 
                               │
                               └── Artifacts binding ──> Git objects / tokens
 
-Git client ──HTTPS──> Artifacts remote (short-lived token)
+Git client ──HTTPS──> app Git proxy (Worker) ──> Artifacts remote
+                     (short-lived Artifacts token)
 
 Push ──> Workflow ──┐
 Cron ───────────────┼──> sync service (lease + idempotent) ──> PostgreSQL
@@ -45,6 +47,11 @@ Page refresh ───────┘
   merge detection, and activity.
 - GitHub/GitLab imports use Artifacts' native import for public remotes and a
   short-lived, authenticated Git smart-HTTP proxy for private remotes.
+- Clone and push URLs on the app's own domain are handled by a second, narrow
+  Git smart-HTTP proxy (`/git/*`) that streams to the project's Artifacts
+  remote. Artifacts does not support custom hostnames, so this proxy is what
+  lets `git.deesha.tech` replace the `<account>.artifacts.cloudflare.net`
+  remote. The direct Artifacts remote remains valid.
 - The Workflow event trigger is the fast path. Cron reconciliation and the
   repository **Refresh** action are the fallback paths. The sync service is
   transport-agnostic.
@@ -169,6 +176,42 @@ Open a group and choose **Import repo**, or visit
   for local/E2E demos. It lists fixed demo repositories and accepts any token of
   at least eight characters.
 
+### Custom domain and clone URLs
+
+The app is served on `https://git.deesha.tech`. The custom hostname lives in the
+top-level `routes` block in `wrangler.jsonc` and requires the `deesha.tech` zone
+to be active on the same Cloudflare account. Wrangler creates the DNS record and
+certificate on deploy.
+
+`npm run deploy` also injects the production runtime values, overriding the
+local defaults in `wrangler.jsonc`:
+
+```bash
+APP_URL=https://git.deesha.tech
+BETTER_AUTH_URL=https://git.deesha.tech
+ENVIRONMENT=production
+```
+
+If the domain changes, update both `routes[0].pattern` and those `--var` values
+in the `deploy` script, then redeploy.
+
+Artifacts has no custom-domain support: the real remote is always
+`https://<ACCOUNT_ID>.artifacts.cloudflare.net/git/<namespace>/<repo>.git`. The
+API therefore rewrites clone URLs to `https://git.deesha.tech/git/...`, and the
+Worker's proxy forwards them:
+
+- Only the Git smart-HTTP operations (`info/refs`, `git-upload-pack`,
+  `git-receive-pack`) are accepted; the namespace and repository must exist in
+  the app database.
+- The user's Artifacts token is passed through unchanged. The proxy never mints
+  or stores credentials, and only forwards a small allowlist of Git headers —
+  browser cookies and origin headers are dropped.
+- Request and response bodies stream through the Worker. Artifacts' per-push cap
+  is 64 MiB, below the 100 MB request-body limit for Free/Pro zones; very large
+  or very slow clones still consume Worker and proxy time.
+- Direct clone/push using the underlying `artifacts.cloudflare.net` remote keeps
+  working with the same token, which is useful for troubleshooting.
+
 ### Tests
 
 ```bash
@@ -239,10 +282,11 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
    DATABASE_URL="postgres://..." npx drizzle-kit migrate
    ```
 
-3. **Set production vars and secrets.** In `wrangler.jsonc`, change `APP_URL`,
-   `BETTER_AUTH_URL` (or manage it as a secret/var), and `ENVIRONMENT` to
-   production. `APP_URL` must be the public HTTPS origin, including for the
-   private-import proxy. Then:
+3. **Set production secrets.** The `deploy` script injects the production
+   `APP_URL`, `BETTER_AUTH_URL`, and `ENVIRONMENT` values, so the local defaults
+   in `wrangler.jsonc` do not leak into the deployment. `APP_URL` must be the
+   public HTTPS origin, including for the private-import proxy and Git proxy.
+   Then:
 
    ```bash
    npx wrangler secret put BETTER_AUTH_SECRET
@@ -261,10 +305,12 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
    and namespace configured in `wrangler.jsonc`. Set `GITLAB_BASE_URL` as a
    Worker var only when importing from a self-hosted GitLab instance.
 
-4. **Verify the deployed pipeline.** Create a project, mint a write credential
-   from Clone, push a branch, and confirm the repository page updates. Check the
-   Workflow instance and the cron reconciliation fallback. Merge a branch
-   locally, push the target branch, and confirm the MR is marked merged.
+4. **Verify the deployed pipeline.** Confirm `/api/health` and the SPA load on
+   the custom domain. Create a project, mint a write credential from Clone, clone
+   and push through the `https://git.deesha.tech/git/...` URL, and confirm the
+   repository page updates. Check the Workflow instance and the cron
+   reconciliation fallback. Merge a branch locally, push the target branch, and
+   confirm the MR is marked merged.
 
 ### Environment separation
 

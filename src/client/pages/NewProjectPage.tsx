@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,25 +102,18 @@ export function NewProjectPage() {
         {group.name}
       </Link>
 
-      <header className="mb-8">
-        <div className="flex items-center gap-2">
-          <p className="mono-label">New project</p>
-          <Badge tone="outline">{group.slug}</Badge>
-        </div>
-        <h1 className="mt-3 font-display text-[38px] leading-none tracking-[-0.04em]">
-          Start a repository.
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-lg font-semibold tracking-tight">
+          New project
+          <span className="ml-2 font-normal text-faint">{group.slug}</span>
         </h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
-          The project gets an empty Cloudflare Artifacts repository, an issue
-          board, and a default set of labels.
-        </p>
-        <Button asChild variant="ghost" size="sm" className="mt-4 -ml-3">
+        <Button asChild variant="ghost" size="sm">
           <Link to={`/groups/${groupSlug}/projects/import`}>
             <GitFork className="size-4" />
-            Import an existing repository instead
+            Import instead
           </Link>
         </Button>
-      </header>
+      </div>
 
       <form onSubmit={submit} className="space-y-7">
         <div className="rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6">

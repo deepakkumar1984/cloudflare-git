@@ -3,7 +3,6 @@ import {
   FolderGit2,
   GitBranch,
   GitFork,
-  Lock,
   Plus,
   Settings,
   Users,
@@ -52,76 +51,67 @@ export function GroupPage() {
   const { group, projects } = data;
 
   return (
-    <div className="space-y-7">
-      <header className="border-b border-line pb-7">
-        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="mono-label">Group</p>
-              {group.archivedAt ? (
-                <Badge tone="red">
-                  <Archive className="size-3" />
-                  Archived
-                </Badge>
-              ) : null}
-              {group.personal ? <Badge tone="outline">Personal</Badge> : null}
-            </div>
-            <h1 className="mt-3 font-display text-[40px] leading-none tracking-[-0.04em]">
+    <div className="space-y-5">
+      <header className="flex flex-col justify-between gap-3 border-b border-line pb-3 sm:flex-row sm:items-center">
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h1 className="truncate text-lg font-semibold tracking-tight">
               {group.name}
             </h1>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-faint">
-              <span className="flex items-center gap-1.5 font-mono">
-                <Lock className="size-3" />
-                {group.slug}
-              </span>
-              <span>·</span>
-              <span>{group.visibility}</span>
-              {group.role ? (
-                <>
-                  <span>·</span>
-                  <Badge tone={roleTone(group.role)}>{group.role}</Badge>
-                </>
-              ) : null}
-            </div>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">
-              {group.description || "No description yet."}
-            </p>
-          </div>
-
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {group.archivedAt ? (
+              <Badge tone="red">
+                <Archive className="size-3" />
+                Archived
+              </Badge>
+            ) : null}
+            {group.personal ? <Badge tone="outline">Personal</Badge> : null}
+            <span className="font-mono text-[11px] text-faint">
+              {group.slug}
+            </span>
             {group.role ? (
-              <Button asChild variant="ghost" size="sm">
-                <Link to={`/groups/${group.slug}/members`}>
-                  <Users className="size-4" />
-                  Members
-                </Link>
-              </Button>
-            ) : null}
-            {group.canManage ? (
-              <Button asChild variant="ghost" size="sm">
-                <Link to={`/groups/${group.slug}/settings`}>
-                  <Settings className="size-4" />
-                  Settings
-                </Link>
-              </Button>
-            ) : null}
-            {group.canCreateProject && !group.archivedAt ? (
-              <>
-                <Button asChild variant="secondary" size="sm">
-                  <Link to={`/groups/${group.slug}/projects/import`}>
-                    <GitFork className="size-4" />
-                    Import repo
-                  </Link>
-                </Button>
-                <Button asChild variant="primary" size="sm">
-                  <Link to={`/groups/${group.slug}/projects/new`}>
-                    <Plus className="size-4" />
-                    New project
-                  </Link>
-                </Button>
-              </>
+              <Badge tone={roleTone(group.role)}>{group.role}</Badge>
             ) : null}
           </div>
+          {group.description ? (
+            <p className="mt-1 truncate text-[13px] text-muted">
+              {group.description}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {group.role ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link to={`/groups/${group.slug}/members`}>
+                <Users className="size-4" />
+                Members
+              </Link>
+            </Button>
+          ) : null}
+          {group.canManage ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link to={`/groups/${group.slug}/settings`}>
+                <Settings className="size-4" />
+                Settings
+              </Link>
+            </Button>
+          ) : null}
+          {group.canCreateProject && !group.archivedAt ? (
+            <>
+              <Button asChild variant="secondary" size="sm">
+                <Link to={`/groups/${group.slug}/projects/import`}>
+                  <GitFork className="size-4" />
+                  Import repo
+                </Link>
+              </Button>
+              <Button asChild variant="primary" size="sm">
+                <Link to={`/groups/${group.slug}/projects/new`}>
+                  <Plus className="size-4" />
+                  New project
+                </Link>
+              </Button>
+            </>
+          ) : null}
         </div>
       </header>
 

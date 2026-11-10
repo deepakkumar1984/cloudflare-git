@@ -32,7 +32,7 @@ export function useProjectContext(): ProjectPageResponse {
 
 function tabClass({ isActive }: { isActive: boolean }) {
   return cn(
-    "relative flex h-11 shrink-0 items-center gap-1.5 px-3 text-[12px] font-medium text-muted transition-colors hover:text-ink",
+    "relative flex h-9 shrink-0 items-center gap-1.5 px-3 text-[12px] font-medium text-muted transition-colors hover:text-ink",
     isActive &&
       "text-ink after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent"
   );
@@ -111,41 +111,32 @@ export function ProjectLayout() {
   const { project, group } = data;
 
   return (
-    <div className="space-y-0">
-      <header className="border-b border-line pb-0">
-        <div className="flex flex-col justify-between gap-4 pb-5 sm:flex-row sm:items-start">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-faint">
-              <Link
-                to={`/groups/${group.slug}`}
-                className="font-mono text-muted transition-colors hover:text-ink"
-              >
-                {group.slug}
-              </Link>
-              <span>/</span>
-              <span className="font-mono">{project.slug}</span>
-              <Lock className="ml-1 size-3" />
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <h1 className="truncate font-display text-[36px] leading-none tracking-[-0.04em]">
-                {project.name}
-              </h1>
-              {project.archivedAt ? (
-                <Badge tone="red">
-                  <Archive className="size-3" />
-                  Archived
-                </Badge>
-              ) : null}
-              {project.role ? (
-                <Badge tone={roleTone(project.role)}>{project.role}</Badge>
-              ) : null}
-            </div>
-            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-muted">
-              {project.description || "No description yet."}
-            </p>
+    <div className="flex min-h-full flex-col">
+      <header className="sticky top-0 z-20 border-b border-line bg-canvas/95 backdrop-blur-md">
+        <div className="flex items-center justify-between gap-3 px-4 py-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              to={`/groups/${group.slug}`}
+              className="max-w-[34%] truncate text-[13px] text-muted transition-colors hover:text-ink"
+            >
+              {group.slug}
+            </Link>
+            <span className="text-faint">/</span>
+            <h1 className="min-w-0 truncate text-[15px] font-semibold tracking-tight">
+              {project.name}
+            </h1>
+            {project.archivedAt ? (
+              <Badge tone="red">
+                <Archive className="size-3" />
+                Archived
+              </Badge>
+            ) : null}
+            {project.role ? (
+              <Badge tone={roleTone(project.role)}>{project.role}</Badge>
+            ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             {data.canReadGit ? (
               <Button
                 variant="secondary"
@@ -167,7 +158,7 @@ export function ProjectLayout() {
           </div>
         </div>
 
-        <nav className="-mb-px flex items-center gap-1 overflow-x-auto">
+        <nav className="flex items-center gap-0.5 overflow-x-auto px-2">
           <NavLink to="." end className={tabClass}>
             Overview
           </NavLink>
@@ -201,31 +192,25 @@ export function ProjectLayout() {
       </header>
 
       {me.data?.artifactsFake ? (
-        <div className="mt-5 rounded-xl border border-accent/25 bg-accent-soft px-4 py-3 text-[12px] leading-6 text-accent-strong">
-          <span className="font-semibold">Demo Artifacts mode.</span> Repository
-          contents are generated locally in memory. Set{" "}
-          <code className="font-mono">ARTIFACTS_FAKE=false</code> and restart to
-          use real source code.
-        </div>
+        <p className="mx-4 mt-3 rounded-md border border-accent/25 bg-accent-soft px-3 py-2 text-[12px] text-accent-strong">
+          Demo Artifacts mode. Files are generated in memory.
+        </p>
       ) : null}
 
       {me.data &&
       !me.data.artifactsFake &&
       project.artifactsRemote?.includes("fake-artifacts.local") ? (
-        <div className="mt-5 rounded-xl border border-accent/25 bg-accent-soft px-4 py-3 text-[12px] leading-6 text-accent-strong">
-          <span className="font-semibold">
-            This repository came from demo mode.
-          </span>{" "}
-          Its contents were never fetched from the provider. Open{" "}
+        <p className="mx-4 mt-3 rounded-md border border-accent/25 bg-accent-soft px-3 py-2 text-[12px] text-accent-strong">
+          This repository was created in demo mode.{" "}
           <Link to="settings" className="font-medium underline">
-            Project settings
+            Re-import from settings
           </Link>{" "}
-          and re-import with a depth such as 1 to load the real source.
-        </div>
+          to load the real source.
+        </p>
       ) : null}
 
       {project.provisioningState !== "ready" ? (
-        <div className="mt-5 flex flex-col justify-between gap-3 rounded-xl border border-accent/25 bg-accent-soft px-4 py-3 sm:flex-row sm:items-center">
+        <div className="mx-4 mt-3 flex flex-col justify-between gap-3 rounded-md border border-accent/25 bg-accent-soft px-3 py-2 sm:flex-row sm:items-center">
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="mt-0.5 size-4 text-accent" />
             <div>
@@ -269,13 +254,12 @@ export function ProjectLayout() {
       ) : null}
 
       {project.archivedAt ? (
-        <div className="mt-5 rounded-xl border border-red/20 bg-red-soft px-4 py-3 text-[13px] text-red">
-          This project is archived and read-only. Unarchive it from settings to
-          make changes.
-        </div>
+        <p className="mx-4 mt-3 rounded-md border border-red/20 bg-red-soft px-3 py-2 text-[12px] text-red">
+          Archived and read-only. Unarchive it from settings to make changes.
+        </p>
       ) : null}
 
-      <div className="pt-6">
+      <div className="flex min-h-0 flex-1 flex-col px-4 py-4">
         <Outlet context={data} />
       </div>
 

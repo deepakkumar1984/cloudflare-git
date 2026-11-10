@@ -122,18 +122,12 @@ export function DashboardPage() {
   const activity = data?.activity ?? [];
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-        <div>
-          <p className="mono-label mb-3">Workspace overview</p>
-          <h1 className="font-display text-[38px] leading-none tracking-[-0.04em] text-ink sm:text-[44px]">
-            {greeting()}, {me.data?.user.name?.split(" ")[0] || "there"}.
-          </h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
-            Your open work, recent projects, and what changed across the groups
-            you belong to.
-          </p>
-        </div>
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-lg font-semibold tracking-tight">
+          {greeting()}
+          {me.data?.user.name ? `, ${me.data.user.name.split(" ")[0]}` : ""}
+        </h1>
         <div className="flex flex-wrap items-center gap-2">
           {personal ? (
             <Button asChild variant="secondary">

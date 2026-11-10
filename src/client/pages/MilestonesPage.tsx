@@ -106,22 +106,15 @@ export function MilestonesPage() {
   });
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <Link
-            to={`${base}/issues`}
-            className="font-mono text-[11px] text-muted hover:text-ink"
-          >
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-base font-semibold tracking-tight">
+          <Link to={`${base}/issues`} className="text-muted hover:text-ink">
             Issues
           </Link>
-          <h1 className="mt-2 font-display text-[34px] leading-none tracking-[-0.04em]">
-            Milestones
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            Group issues into a release, sprint, or dated outcome.
-          </p>
-        </div>
+          <span className="mx-1.5 text-faint">/</span>
+          Milestones
+        </h1>
         {canManage ? (
           <Button variant="primary" onClick={openCreate}>
             <Plus className="size-4" />

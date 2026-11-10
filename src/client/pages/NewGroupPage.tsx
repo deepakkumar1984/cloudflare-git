@@ -53,16 +53,7 @@ export function NewGroupPage() {
         All groups
       </Link>
 
-      <header className="mb-8">
-        <p className="mono-label mb-3">New group</p>
-        <h1 className="font-display text-[38px] leading-none tracking-[-0.04em]">
-          Create a shared home.
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
-          Groups hold projects and pass membership down to them. You can change
-          these details later.
-        </p>
-      </header>
+      <h1 className="mb-6 text-lg font-semibold tracking-tight">New group</h1>
 
       <form onSubmit={submit} className="space-y-7">
         <div className="rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6">

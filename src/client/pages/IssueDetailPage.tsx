@@ -252,7 +252,7 @@ export function IssueDetailPage() {
               </Badge>
             ) : null}
           </div>
-          <h1 className="mt-2 text-balance font-display text-[34px] leading-tight tracking-[-0.035em]">
+          <h1 className="mt-2 text-balance text-xl font-semibold leading-snug tracking-tight">
             {issue.title}
           </h1>
           <p className="mt-2 text-[12px] text-muted">

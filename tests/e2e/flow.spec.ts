@@ -81,7 +81,7 @@ test("create, review, and merge-request UI flow", async ({ browser }) => {
 
   await ownerPage.goto(`/groups/${groupSlug}/projects/import`);
   await expect(
-    ownerPage.getByRole("heading", { name: "Bring a repository with you." })
+    ownerPage.getByRole("heading", { name: "Import repository" })
   ).toBeVisible();
   await expect(ownerPage.getByLabel("Repository URL")).toBeVisible();
   await ownerPage
@@ -252,5 +252,5 @@ test("imports a public repository by URL without a token", async ({ page }) => {
 });
 
 function ownerPageHeading(page: Page) {
-  return page.getByRole("heading", { name: "Bring a repository with you." });
+  return page.getByRole("heading", { name: "Import repository" });
 }

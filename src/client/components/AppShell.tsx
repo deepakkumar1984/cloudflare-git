@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authClient } from "@/lib/auth";
 import { useMe } from "@/lib/queries";
 import type { GroupSummary } from "@/lib/types";
@@ -199,18 +199,29 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function isProjectRoute(pathname: string) {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts[0] !== "groups" || parts.length < 3) return false;
+  const section = parts[2];
+  return (
+    section !== "members" && section !== "settings" && section !== "projects"
+  );
+}
+
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeMobile = useCallback(() => setMobileOpen(false), []);
+  const location = useLocation();
+  const projectRoute = isProjectRoute(location.pathname);
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen border-r border-line lg:block">
+    <div className="flex h-dvh min-h-0 overflow-hidden">
+      <aside className="hidden h-full w-[248px] shrink-0 border-r border-line lg:block">
         <SidebarContent />
       </aside>
 
-      <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-canvas/90 px-4 backdrop-blur-lg lg:hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-line bg-canvas px-3 lg:hidden">
           <button
             className="rounded-md p-2 text-muted hover:bg-surface hover:text-ink"
             onClick={() => setMobileOpen(true)}
@@ -247,8 +258,15 @@ export function AppShell() {
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-          <Outlet />
+        <main className="min-h-0 w-full flex-1 overflow-y-auto">
+          <div
+            className={cn(
+              "flex min-h-full flex-col",
+              !projectRoute && "px-4 py-3"
+            )}
+          >
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

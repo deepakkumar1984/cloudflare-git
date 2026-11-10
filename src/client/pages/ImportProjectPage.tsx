@@ -17,7 +17,6 @@ import {
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -511,20 +510,10 @@ export function ImportProjectPage() {
         {group.name}
       </Link>
 
-      <header className="mb-8">
-        <div className="flex items-center gap-2">
-          <p className="mono-label">Import repository</p>
-          <Badge tone="outline">{group.slug}</Badge>
-        </div>
-        <h1 className="mt-3 font-display text-[38px] leading-none tracking-[-0.04em]">
-          Bring a repository with you.
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-          Import a public repository from its URL, or connect GitHub or GitLab
-          to browse repositories and import private projects. This is a one-time
-          copy; you can re-import later from project settings.
-        </p>
-      </header>
+      <h1 className="mb-6 text-lg font-semibold tracking-tight">
+        Import repository
+        <span className="ml-2 font-normal text-faint">{group.slug}</span>
+      </h1>
 
       {me.data?.artifactsFake ? (
         <div className="mb-6 rounded-xl border border-accent/25 bg-accent-soft px-4 py-3 text-[12px] leading-6 text-accent-strong">

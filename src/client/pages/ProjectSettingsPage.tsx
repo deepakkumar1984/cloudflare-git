@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   Archive,
   ArchiveRestore,
   GitBranch,
@@ -108,6 +109,23 @@ export function ProjectSettingsPage() {
     // Refresh once when the import completes; the status is the trigger.
   }, [projectImport.data?.import?.status, groupSlug, projectSlug, queryClient]);
 
+  const refreshRefs = useMutation({
+    mutationFn: () =>
+      api.post(
+        `/groups/${groupSlug}/projects/${projectSlug}/repository/refresh`
+      ),
+    onSuccess: async () => {
+      toast.success("Refs refreshed from Artifacts");
+      await Promise.all([
+        refresh(),
+        queryClient.invalidateQueries({
+          queryKey: ["repository", groupSlug, projectSlug],
+        }),
+      ]);
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  });
+
   const reimport = useMutation({
     mutationFn: () =>
       api.post<{ import: ProjectImportSummary }>(
@@ -151,15 +169,8 @@ export function ProjectSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <header>
-        <h1 className="font-display text-[36px] leading-none tracking-[-0.04em]">
-          Project settings
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          Repository identity is immutable; display fields can change.
-        </p>
-      </header>
+    <div className="mx-auto w-full max-w-3xl space-y-5">
+      <h1 className="text-lg font-semibold tracking-tight">Project settings</h1>
 
       {project.archivedAt ? (
         <div className="rounded-lg border border-red/20 bg-red-soft px-4 py-3 text-[13px] text-red">
@@ -397,6 +408,46 @@ export function ProjectSettingsPage() {
                 Re-import from provider
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {project.provisioningState === "ready" ? (
+        <Card className="border-red/40 bg-red-soft/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red">
+              <AlertTriangle className="size-4" />
+              Refresh refs
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <p className="text-[13px] leading-6 text-red">
+              Re-reads every branch and tag from Artifacts and rewrites the
+              cached ref list. Refs that no longer exist are marked deleted, and
+              open merge requests can change state. Use this only when the
+              repository view is stale.
+            </p>
+            <Button
+              variant="danger"
+              className="shrink-0"
+              disabled={refreshRefs.isPending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Refresh refs from Artifacts? The cached branch and tag list will be rewritten. Missing refs are marked deleted, and open merge requests may change state."
+                  )
+                ) {
+                  refreshRefs.mutate();
+                }
+              }}
+            >
+              {refreshRefs.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
+              Refresh refs
+            </Button>
           </CardContent>
         </Card>
       ) : null}

@@ -92,18 +92,14 @@ export function IssuesPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="mono-label mb-2">Issues</p>
-          <h1 className="font-display text-[34px] leading-none tracking-[-0.04em]">
-            Work in the open.
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            {total} {state === "all" ? "total" : state} issue
-            {total === 1 ? "" : "s"}
-          </p>
-        </div>
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-base font-semibold tracking-tight">
+          Issues
+          <span className="ml-2 font-normal text-faint">
+            {total} {state === "all" ? "total" : state}
+          </span>
+        </h1>
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="ghost" size="sm">
             <Link to={`${base}/boards`}>Board</Link>
