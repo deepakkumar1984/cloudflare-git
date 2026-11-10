@@ -28,11 +28,7 @@ type Whoami = {
 
 type D1Row = { name?: string; uuid?: string };
 
-const SECRET_NAMES = [
-  "BETTER_AUTH_SECRET",
-  "PROVIDER_TOKEN_KEY",
-  "ADMIN_EMAILS",
-] as const;
+const SECRET_NAMES = ["BETTER_AUTH_SECRET", "PROVIDER_TOKEN_KEY"] as const;
 
 function wrangler(
   args: string[],
@@ -411,7 +407,7 @@ async function main(): Promise<void> {
         try {
           return await confirm(
             rl,
-            "Copy BETTER_AUTH_SECRET, PROVIDER_TOKEN_KEY, and ADMIN_EMAILS from .dev.vars to the Worker?",
+            "Copy BETTER_AUTH_SECRET and PROVIDER_TOKEN_KEY from .dev.vars to the Worker?",
             true
           );
         } finally {

@@ -1,16 +1,13 @@
 # Secrets. Copy to .dev.vars and never commit it.
-# Deploy to Cloudflare prompts for these. Use the public https origin for
-# BETTER_AUTH_URL there, and http://localhost:5173 when running locally.
-# Generate both secrets with: openssl rand -base64 32
+# Deploy to Cloudflare prompts only for these. Generate both with:
+# openssl rand -base64 32
 BETTER_AUTH_SECRET=replace-with-openssl-rand-base64-32
 # Keep this stable across environments that share a database. Rotating it
 # means users must reconnect GitHub and GitLab.
 PROVIDER_TOKEN_KEY=replace-with-another-openssl-rand-base64-32
-BETTER_AUTH_URL=http://localhost:5173
-# Wrangler defaults ENVIRONMENT to production for deploy. Keep development here
-# so local auth limits and the demo-file seeder stay available.
-ENVIRONMENT=development
-ADMIN_EMAILS=
+# ENVIRONMENT, BETTER_AUTH_URL, and ADMIN_EMAILS are plain text vars in
+# wrangler.jsonc, not secrets. Uncomment the next line for local dev only.
+# ENVIRONMENT=development
 # Local only. Do not set ARTIFACTS_FAKE=true on a deployed Worker.
 # ARTIFACTS_FAKE=true
 # Optional self-hosted GitLab base URL. Defaults to https://gitlab.com.

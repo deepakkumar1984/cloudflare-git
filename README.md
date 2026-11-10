@@ -108,9 +108,7 @@ Fill `.dev.vars` with secrets:
 ```dotenv
 BETTER_AUTH_SECRET=<openssl rand -base64 32>
 PROVIDER_TOKEN_KEY=<openssl rand -base64 32>
-BETTER_AUTH_URL=http://localhost:5173
 ENVIRONMENT=development
-ADMIN_EMAILS=you@example.com
 ARTIFACTS_FAKE=true
 # Optional, defaults to https://gitlab.com:
 # GITLAB_BASE_URL=https://gitlab.com
@@ -127,8 +125,9 @@ npm run dev
 ```
 
 Open <http://localhost:5173>, create an account, and create a group/project.
-Emails listed in `ADMIN_EMAILS` are promoted to admin on account creation; an
-admin bypasses membership checks.
+`ENVIRONMENT`, `BETTER_AUTH_URL`, and `ADMIN_EMAILS` are plain text vars in
+`wrangler.jsonc`, not secrets. Emails listed in `ADMIN_EMAILS` are promoted to
+admin on account creation; an admin bypasses membership checks.
 
 ### Fake repository data
 
@@ -323,7 +322,6 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
    ```bash
    npx wrangler secret put BETTER_AUTH_SECRET
    npx wrangler secret put PROVIDER_TOKEN_KEY
-   npx wrangler secret put ADMIN_EMAILS
    npm run deploy
    ```
 

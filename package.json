@@ -104,19 +104,19 @@
         "description": "Artifacts namespace for this Worker. Use a different namespace for each environment."
       },
       "ENVIRONMENT": {
-        "description": "Defaults to `production` for Cloudflare deploys. `npm run dev` uses `development` from `.dev.vars`."
+        "description": "Plain text. Defaults to production. Set development in `.dev.vars` for local dev only."
       },
       "BETTER_AUTH_SECRET": {
         "description": "Session signing secret. Generate one with `openssl rand -base64 32`."
       },
       "BETTER_AUTH_URL": {
-        "description": "Same public https origin as `APP_URL`. Auth rejects other origins. Local dev uses `http://localhost:5173`."
+        "description": "Plain text, not a secret. Optional fallback origin. The Worker uses the hostname of each request."
       },
       "PROVIDER_TOKEN_KEY": {
         "description": "Encrypts saved GitHub and GitLab tokens. Generate a second value with `openssl rand -base64 32`. Keep it stable, or users must reconnect providers."
       },
       "ADMIN_EMAILS": {
-        "description": "Comma-separated emails that become admins when those people sign up. Can be empty."
+        "description": "Plain text, not a secret. Comma-separated emails that become admins when those people sign up. Can be empty."
       }
     }
   }

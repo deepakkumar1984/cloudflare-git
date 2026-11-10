@@ -32,7 +32,13 @@ describe("project config", () => {
       d1_databases: Array<{ remote: boolean; database_name: string }>;
       artifacts: Array<{ remote: boolean; namespace: string }>;
       workflows: Array<{ name: string }>;
-      vars: { APP_NAME: string; APP_URL: string; ENVIRONMENT: string };
+      vars: {
+        APP_NAME: string;
+        APP_URL: string;
+        BETTER_AUTH_URL: string;
+        ADMIN_EMAILS: string;
+        ENVIRONMENT: string;
+      };
     };
     expect(rendered.name).toBe("cloudflare-git");
     expect(rendered.account_id).toBeUndefined();
@@ -44,6 +50,8 @@ describe("project config", () => {
     expect(rendered.vars.APP_NAME).toBe("Cloudflare Git");
     expect(rendered.vars.APP_URL).toBe("http://localhost:5173");
     expect(rendered.vars.ENVIRONMENT).toBe("production");
+    expect(rendered.vars.BETTER_AUTH_URL).toBe("http://localhost:5173");
+    expect(rendered.vars.ADMIN_EMAILS).toBe("");
     const example = readFileSync("wrangler.example.jsonc", "utf8")
       .split("\n")
       .filter((line) => !line.trim().startsWith("//"))

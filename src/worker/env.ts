@@ -4,13 +4,12 @@ import type { Role } from "@shared/constants";
 import type { Auth, AuthSession } from "./auth";
 
 // Secrets and local-only flags live in `.dev.vars` or `wrangler secret put`.
-// They are not in wrangler.jsonc, so generated types do not include them.
+// ENVIRONMENT, BETTER_AUTH_URL, and ADMIN_EMAILS are plain text vars in
+// wrangler.jsonc.
 declare global {
   interface Env {
     BETTER_AUTH_SECRET: string;
-    BETTER_AUTH_URL: string;
     PROVIDER_TOKEN_KEY?: string;
-    ADMIN_EMAILS?: string;
     ARTIFACTS_FAKE?: string;
     GITLAB_BASE_URL?: string;
     GIT_PROVIDERS_FAKE?: string;
