@@ -1,5 +1,7 @@
 # Cloudflare Git
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/deepakkumar1984/cloudflare-git)
+
 A GitLab-style collaboration app built on Cloudflare Workers, D1, and
 Artifacts. D1 stores groups, projects, issues, reviews, and permissions.
 Artifacts stores the Git objects and refs. Worker name, D1 database, Artifacts
@@ -90,9 +92,11 @@ cp .dev.vars.example .dev.vars
 `npm run setup` checks `wrangler whoami`, opens `wrangler login` if needed, and
 asks for the worker name, app name, D1 database name, Artifacts namespace,
 optional custom domain, and public URL. It creates the D1 database when that
-name does not already exist, then writes `wrangler.jsonc` and
-`.cloudflare-git.json`. Those two files hold your account id and database id.
-They are gitignored. Run setup again to change them.
+name does not already exist, then rewrites `wrangler.jsonc` and writes
+`.cloudflare-git.json`. The committed `wrangler.jsonc` is only a template with
+a placeholder database id. After setup, your copy contains your account id and
+database id. Do not commit that copy. `.cloudflare-git.json` is gitignored.
+Run setup again to change them.
 
 For a scripted run, set `CLOUDFLARE_GIT_APP_URL` and any of
 `CLOUDFLARE_GIT_WORKER_NAME`, `CLOUDFLARE_GIT_APP_NAME`,
@@ -193,8 +197,16 @@ Leave the custom domain blank in setup to serve the Worker on
 hostname, enter it during setup. The zone must already be on the same
 Cloudflare account. Wrangler creates the DNS record and certificate on deploy.
 
-`npm run deploy` reads `.cloudflare-git.json` and overrides the local defaults
-in `wrangler.jsonc` for that deployment:
+The [Deploy to Cloudflare](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
+button clones this repository into your Git account and provisions the Worker,
+D1 database, and workflow. Before it deploys, set `APP_URL` to the public https
+origin, set `BETTER_AUTH_URL` to that same origin, and set `ENVIRONMENT` to
+`production`.
+
+`npm run deploy` applies remote D1 migrations for the `DB` binding, then runs
+`wrangler deploy` with the vars in `wrangler.jsonc`. When you deploy from
+`npm run setup`, that step instead reads `.cloudflare-git.json` and overrides
+the local defaults for that deployment:
 
 ```text
 APP_URL=<public origin from setup>
@@ -273,7 +285,7 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
 | `npm test`            | Vitest unit + integration suite             |
 | `npm run db:generate` | Generate a Drizzle SQLite migration         |
 | `npm run db:migrate`  | Apply migrations to remote D1               |
-| `npm run deploy`      | Build and deploy with the setup URL         |
+| `npm run deploy`      | Migrate remote D1 and run `wrangler deploy` |
 | `npm run db:studio`   | Drizzle Studio                              |
 
 ## Configuration and deployment
@@ -297,12 +309,12 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
    objects are not in that export; they stay in the Artifacts namespace from
    setup.
 
-3. **Set production secrets, then deploy.** `npm run deploy` injects the public
-   `APP_URL`, `BETTER_AUTH_URL`, `APP_NAME`, and `ENVIRONMENT=production`, so
-   the localhost defaults in `wrangler.jsonc` do not ship. `APP_URL` must be
-   the public HTTPS origin, including for the private-import proxy and Git
-   proxy. Setup can deploy and copy secrets from `.dev.vars`, or you can do it
-   yourself:
+3. **Set production secrets, then deploy.** Use the Deploy to Cloudflare button,
+   or set `APP_URL` and `BETTER_AUTH_URL` to the public https origin and
+   `ENVIRONMENT` to `production` before `npm run deploy`. `APP_URL` must be
+   that public origin, including for the private-import proxy and Git proxy.
+   Setup can deploy with those overrides and copy secrets from `.dev.vars`, or
+   you can do it yourself:
 
    ```bash
    npx wrangler secret put BETTER_AUTH_SECRET
@@ -370,3 +382,7 @@ authenticated users. Confidential issues require reporter access or higher.
   limitation, not an app bug.
 - M1 does not include email verification or password reset. Treat it as an
   internal/controlled-use release until those are added.
+
+## License
+
+[MIT](LICENSE)

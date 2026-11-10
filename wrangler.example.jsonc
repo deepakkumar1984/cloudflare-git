@@ -1,4 +1,4 @@
-// Shape written by `npm run setup`. The database id below is a placeholder. Do not deploy this file.
+// Template. Deploy to Cloudflare and `npm run setup` replace the placeholder D1 id.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cloudflare-git",

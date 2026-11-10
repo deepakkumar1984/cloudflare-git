@@ -10,7 +10,7 @@ export type ProjectConfig = {
   d1Name: string;
   d1Id: string;
   artifactsNamespace: string;
-  /** Public origin used by `npm run deploy`. Local dev keeps localhost. */
+  /** Public origin used when setup deploys. Local dev keeps localhost. */
   appUrl: string;
   customDomain: string | null;
   accountId: string | null;

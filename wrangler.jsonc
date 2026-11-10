@@ -1,0 +1,68 @@
+// Template. Deploy to Cloudflare and `npm run setup` replace the placeholder D1 id.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudflare-git",
+  "main": "./src/worker/index.ts",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/git/*"],
+  },
+  "vars": {
+    "APP_NAME": "Cloudflare Git",
+    "APP_URL": "http://localhost:5173",
+    "ARTIFACTS_NAMESPACE": "cloudflare-git",
+    "ENVIRONMENT": "development",
+  },
+  "artifacts": [
+    {
+      "binding": "ARTIFACTS",
+      "namespace": "cloudflare-git",
+      "remote": true,
+    },
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cloudflare-git",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "src/db/migrations",
+      "remote": true,
+    },
+  ],
+  "workflows": [
+    {
+      "name": "cloudflare-git-push-sync",
+      "binding": "PUSH_SYNC",
+      "class_name": "PushSyncWorkflow",
+    },
+  ],
+  "triggers": {
+    "crons": ["*/10 * * * *"],
+    "events": [
+      {
+        "type": "cf.artifacts.repo.pushed",
+        "filter": {
+          "namespace": "cloudflare-git",
+        },
+        "targets": [
+          {
+            "type": "workflow",
+            "workflow_name": "cloudflare-git-push-sync",
+          },
+        ],
+      },
+    ],
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+  },
+}

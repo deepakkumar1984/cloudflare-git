@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Git collaboration on Cloudflare Workers, D1, and Artifacts.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "setup": "tsx scripts/setup.ts",
@@ -11,7 +12,7 @@
     "dev:e2e": "tsx scripts/e2e-server.ts",
     "build": "vite build",
     "preview": "npm run build && tsx scripts/dev.ts preview",
-    "deploy": "tsx scripts/deploy.ts",
+    "deploy": "npm run db:migrate && wrangler deploy",
     "types": "wrangler types",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src tests scripts",
@@ -90,5 +91,33 @@
     "workerd@1.20260815.1": true,
     "workerd@1.20261103.1": true,
     "workerd@1.20261109.1": true
+  },
+  "cloudflare": {
+    "bindings": {
+      "APP_URL": {
+        "description": "Public https origin of this Worker, with no path. Clone URLs and the private-import proxy use it. Local dev uses `http://localhost:5173`."
+      },
+      "APP_NAME": {
+        "description": "Name shown in the header and the browser title."
+      },
+      "ARTIFACTS_NAMESPACE": {
+        "description": "Artifacts namespace for this Worker. Use a different namespace for each environment."
+      },
+      "ENVIRONMENT": {
+        "description": "Set this to `production` on the deployed Worker. Local dev uses `development`."
+      },
+      "BETTER_AUTH_SECRET": {
+        "description": "Session signing secret. Generate one with `openssl rand -base64 32`."
+      },
+      "BETTER_AUTH_URL": {
+        "description": "Same public https origin as `APP_URL`. Auth rejects other origins. Local dev uses `http://localhost:5173`."
+      },
+      "PROVIDER_TOKEN_KEY": {
+        "description": "Encrypts saved GitHub and GitLab tokens. Generate a second value with `openssl rand -base64 32`. Keep it stable, or users must reconnect providers."
+      },
+      "ADMIN_EMAILS": {
+        "description": "Comma-separated emails that become admins when those people sign up. Can be empty."
+      }
+    }
   }
 }

@@ -1,6 +1,6 @@
 node_modules/
-# Local Cloudflare project settings. `npm run setup` writes these.
-wrangler.jsonc
+# Account-specific settings written by `npm run setup`. wrangler.jsonc is the
+# committed template; setup rewrites your local copy.
 .cloudflare-git.json
 # Operator notes that are not part of the public app.
 D1_MIGRATION_HANDOVER.md

@@ -1,15 +1,16 @@
-# Local development secrets. Copy to .dev.vars and never commit it.
-# Run `npm run setup` first. It logs into Cloudflare and writes wrangler.jsonc.
-# Collaboration data lives in the remote D1 database from that setup.
+# Secrets. Copy to .dev.vars and never commit it.
+# Deploy to Cloudflare prompts for these. Use the public https origin for
+# BETTER_AUTH_URL there, and http://localhost:5173 when running locally.
+# Generate both secrets with: openssl rand -base64 32
 BETTER_AUTH_SECRET=replace-with-openssl-rand-base64-32
-# Use the same value locally and in every deployed environment. Provider
-# tokens stored in the shared database cannot be decrypted without it.
+# Keep this stable across environments that share a database. Rotating it
+# means users must reconnect GitHub and GitLab.
 PROVIDER_TOKEN_KEY=replace-with-another-openssl-rand-base64-32
 BETTER_AUTH_URL=http://localhost:5173
 ADMIN_EMAILS=
-# true uses the in-memory fake Artifacts adapter; false uses the real binding.
-ARTIFACTS_FAKE=true
+# Local only. Do not set ARTIFACTS_FAKE=true on a deployed Worker.
+# ARTIFACTS_FAKE=true
 # Optional self-hosted GitLab base URL. Defaults to https://gitlab.com.
 # GITLAB_BASE_URL=https://gitlab.com
-# Demo provider repositories for local/E2E only; ignored in production.
+# Local-only provider demo mode. Never enable it in production.
 # GIT_PROVIDERS_FAKE=true
