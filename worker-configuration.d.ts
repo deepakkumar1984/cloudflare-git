@@ -7,7 +7,7 @@ interface __BaseEnv_Env {
 	APP_NAME: "Cloudflare Git";
 	APP_URL: "http://localhost:5173";
 	ARTIFACTS_NAMESPACE: "cloudflare-git";
-	ENVIRONMENT: "development";
+	ENVIRONMENT: "production";
 	PUSH_SYNC: Workflow<Parameters<import("./src/worker/index").PushSyncWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {

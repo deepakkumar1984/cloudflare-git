@@ -151,7 +151,7 @@ export function wranglerConfigObject(
     APP_NAME: config.appName,
     APP_URL: "http://localhost:5173",
     ARTIFACTS_NAMESPACE: config.artifactsNamespace,
-    ENVIRONMENT: "development",
+    ENVIRONMENT: "production",
   };
   object.artifacts = [
     {

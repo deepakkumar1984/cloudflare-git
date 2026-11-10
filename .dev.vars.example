@@ -7,6 +7,9 @@ BETTER_AUTH_SECRET=replace-with-openssl-rand-base64-32
 # means users must reconnect GitHub and GitLab.
 PROVIDER_TOKEN_KEY=replace-with-another-openssl-rand-base64-32
 BETTER_AUTH_URL=http://localhost:5173
+# Wrangler defaults ENVIRONMENT to production for deploy. Keep development here
+# so local auth limits and the demo-file seeder stay available.
+ENVIRONMENT=development
 ADMIN_EMAILS=
 # Local only. Do not set ARTIFACTS_FAKE=true on a deployed Worker.
 # ARTIFACTS_FAKE=true

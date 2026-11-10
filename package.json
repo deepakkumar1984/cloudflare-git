@@ -104,7 +104,7 @@
         "description": "Artifacts namespace for this Worker. Use a different namespace for each environment."
       },
       "ENVIRONMENT": {
-        "description": "Set this to `production` on the deployed Worker. Local dev uses `development`."
+        "description": "Defaults to `production` for Cloudflare deploys. `npm run dev` uses `development` from `.dev.vars`."
       },
       "BETTER_AUTH_SECRET": {
         "description": "Session signing secret. Generate one with `openssl rand -base64 32`."

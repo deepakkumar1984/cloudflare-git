@@ -223,7 +223,7 @@ repositoryRoutes.post(
   loadProject,
   async (c) => {
     if (
-      c.env.ENVIRONMENT !== "development" ||
+      (c.env.ENVIRONMENT as string) !== "development" ||
       c.env.ARTIFACTS_FAKE !== "true"
     ) {
       throw notFound();

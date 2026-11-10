@@ -43,7 +43,7 @@ describe("project config", () => {
     expect(rendered.workflows[0]?.name).toBe(workflowName("cloudflare-git"));
     expect(rendered.vars.APP_NAME).toBe("Cloudflare Git");
     expect(rendered.vars.APP_URL).toBe("http://localhost:5173");
-    expect(rendered.vars.ENVIRONMENT).toBe("development");
+    expect(rendered.vars.ENVIRONMENT).toBe("production");
     const example = readFileSync("wrangler.example.jsonc", "utf8")
       .split("\n")
       .filter((line) => !line.trim().startsWith("//"))

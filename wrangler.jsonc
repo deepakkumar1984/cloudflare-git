@@ -16,7 +16,7 @@
     "APP_NAME": "Cloudflare Git",
     "APP_URL": "http://localhost:5173",
     "ARTIFACTS_NAMESPACE": "cloudflare-git",
-    "ENVIRONMENT": "development",
+    "ENVIRONMENT": "production",
   },
   "artifacts": [
     {

@@ -109,6 +109,7 @@ Fill `.dev.vars` with secrets:
 BETTER_AUTH_SECRET=<openssl rand -base64 32>
 PROVIDER_TOKEN_KEY=<openssl rand -base64 32>
 BETTER_AUTH_URL=http://localhost:5173
+ENVIRONMENT=development
 ADMIN_EMAILS=you@example.com
 ARTIFACTS_FAKE=true
 # Optional, defaults to https://gitlab.com:
@@ -199,9 +200,9 @@ Cloudflare account. Wrangler creates the DNS record and certificate on deploy.
 
 The [Deploy to Cloudflare](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
 button clones this repository into your Git account and provisions the Worker,
-D1 database, and workflow. Before it deploys, set `APP_URL` to the public https
-origin, set `BETTER_AUTH_URL` to that same origin, and set `ENVIRONMENT` to
-`production`.
+D1 database, and workflow. `ENVIRONMENT` defaults to `production`. Before it
+deploys, set `APP_URL` to the public https origin and set `BETTER_AUTH_URL` to
+that same origin.
 
 `npm run deploy` applies remote D1 migrations for the `DB` binding, then runs
 `wrangler deploy` with the vars in `wrangler.jsonc`. When you deploy from
@@ -215,9 +216,9 @@ APP_NAME=<app name from setup>
 ENVIRONMENT=production
 ```
 
-Local `wrangler.jsonc` keeps `APP_URL=http://localhost:5173` and
-`ENVIRONMENT=development`. Run `npm run setup` again when the public URL or
-domain changes.
+Local `wrangler.jsonc` keeps `APP_URL=http://localhost:5173`. `ENVIRONMENT` in
+that file is `production`, and `.dev.vars` sets `ENVIRONMENT=development` for
+`npm run dev`. Run `npm run setup` again when the public URL or domain changes.
 
 Artifacts has no custom-domain support: the real remote is always
 `https://<ACCOUNT_ID>.artifacts.cloudflare.net/git/<namespace>/<repo>.git`. The
@@ -310,8 +311,8 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
    setup.
 
 3. **Set production secrets, then deploy.** Use the Deploy to Cloudflare button,
-   or set `APP_URL` and `BETTER_AUTH_URL` to the public https origin and
-   `ENVIRONMENT` to `production` before `npm run deploy`. `APP_URL` must be
+   or set `APP_URL` and `BETTER_AUTH_URL` to the public https origin before
+   `npm run deploy`. `ENVIRONMENT` is already `production`. `APP_URL` must be
    that public origin, including for the private-import proxy and Git proxy.
    Setup can deploy with those overrides and copy secrets from `.dev.vars`, or
    you can do it yourself:

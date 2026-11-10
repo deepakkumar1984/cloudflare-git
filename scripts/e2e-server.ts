@@ -32,6 +32,7 @@ try {
 const vars: Record<string, string> = {
   ...localVars,
   ARTIFACTS_FAKE: "true",
+  ENVIRONMENT: "development",
 };
 delete vars.DATABASE_URL;
 if (process.env.BETTER_AUTH_URL) {
