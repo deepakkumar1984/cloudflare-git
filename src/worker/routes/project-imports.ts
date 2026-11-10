@@ -100,7 +100,8 @@ projectImportRoutes.post(
         c.env as ProviderEnv,
         session.user.id,
         { ...input, groupId: group.id },
-        token
+        token,
+        c.req.url
       );
       const role = atLeast(groupRole, "owner") ? "owner" : "maintainer";
       return c.json(
@@ -169,7 +170,8 @@ projectImportRoutes.post(
         c.env as ProviderEnv,
         session.user.id,
         { ...input, groupId: group.id },
-        token
+        token,
+        c.req.url
       );
       const role = atLeast(groupRole, "owner") ? "owner" : "maintainer";
       return c.json(
@@ -253,7 +255,7 @@ projectImportRoutes.post(
       project,
       session.user.id,
       token,
-      body
+      { ...body, requestUrl: c.req.url }
     );
     return c.json({ import: importSummary(job) }, 202);
   }

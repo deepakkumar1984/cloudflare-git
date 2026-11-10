@@ -54,7 +54,7 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
 export const requestContext: MiddlewareHandler<AppEnv> = async (c, next) => {
   const db = createDatabase(c.env.DB);
   c.set("db", db);
-  c.set("auth", createAuth(db, c.env));
+  c.set("auth", createAuth(db, c.env, c.req.url));
   await next();
 };
 

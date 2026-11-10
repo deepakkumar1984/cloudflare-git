@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { publicGitRemote } from "@worker/services/public-remote";
+import {
+  publicGitRemote,
+  resolveAppOrigin,
+} from "@worker/services/public-remote";
 
 const account = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const app = "https://git.example.com";
@@ -31,6 +34,18 @@ describe("publicGitRemote", () => {
   it("keeps null and malformed remotes unchanged", () => {
     expect(publicGitRemote(null, app)).toBeNull();
     expect(publicGitRemote("not a url", app)).toBe("not a url");
+  });
+
+  it("uses the request host instead of the localhost deploy default", () => {
+    expect(
+      resolveAppOrigin(
+        "https://cloudflare-git.example.workers.dev/groups",
+        "http://localhost:5173"
+      )
+    ).toBe("https://cloudflare-git.example.workers.dev");
+    expect(resolveAppOrigin(undefined, "http://localhost:5173")).toBe(
+      "http://localhost:5173"
+    );
   });
 
   it("does not rewrite when the app URL is invalid", () => {

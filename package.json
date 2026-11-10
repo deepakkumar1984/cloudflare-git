@@ -95,7 +95,7 @@
   "cloudflare": {
     "bindings": {
       "APP_URL": {
-        "description": "Public https origin of this Worker, with no path. Clone URLs and the private-import proxy use it. Local dev uses `http://localhost:5173`."
+        "description": "Optional. Leave the localhost default. The Worker uses the hostname of each request, which is the workers.dev or custom domain Cloudflare serves. Set this only to force one origin."
       },
       "APP_NAME": {
         "description": "Name shown in the header and the browser title."

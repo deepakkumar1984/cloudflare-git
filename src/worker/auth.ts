@@ -5,8 +5,9 @@ import type { Database } from "@db/client";
 import * as schema from "@db/schema";
 import { USERNAME_RE, configuredAppName } from "@shared/constants";
 import { ensurePersonalGroup } from "@worker/services/personal-groups";
+import { resolveAppOrigin } from "@worker/services/public-remote";
 
-export function createAuth(db: Database, env: Env) {
+export function createAuth(db: Database, env: Env, requestUrl?: string) {
   if (!env.BETTER_AUTH_SECRET || env.BETTER_AUTH_SECRET.length < 32) {
     throw new Error("BETTER_AUTH_SECRET must be at least 32 characters");
   }
@@ -21,19 +22,32 @@ export function createAuth(db: Database, env: Env) {
       .filter(Boolean)
   );
 
+  const origin = resolveAppOrigin(
+    requestUrl,
+    env.BETTER_AUTH_URL || env.APP_URL
+  );
+  const trustedOrigins = new Set<string>([origin]);
+  for (const value of [env.BETTER_AUTH_URL, env.APP_URL]) {
+    if (!value) continue;
+    try {
+      const configured = new URL(value).origin;
+      const local =
+        configured.startsWith("http://localhost") ||
+        configured.startsWith("http://127.0.0.1");
+      if (production && local) continue;
+      trustedOrigins.add(configured);
+    } catch {
+      // Ignore a placeholder that is not a URL.
+    }
+  }
+  if (!production) trustedOrigins.add("http://localhost:5174");
+
   return betterAuth({
     appName: configuredAppName(env.APP_NAME),
-    baseURL: env.BETTER_AUTH_URL,
+    baseURL: origin,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [
-      ...new Set([
-        env.BETTER_AUTH_URL,
-        env.APP_URL,
-        // Playwright starts an isolated server on 5174 during development.
-        ...(production ? [] : ["http://localhost:5174"]),
-      ]),
-    ].filter(Boolean),
+    trustedOrigins: [...trustedOrigins],
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema,

@@ -1,5 +1,28 @@
 const ARTIFACTS_HOST = "artifacts.cloudflare.net";
 
+function originOf(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The hostname the user actually opened. A Cloudflare deploy does not know
+ * its workers.dev or custom-domain origin until a request arrives, so that
+ * request wins over the localhost default in wrangler.jsonc.
+ */
+export function resolveAppOrigin(
+  requestUrl: string | undefined,
+  configuredUrl?: string
+): string {
+  return (
+    originOf(requestUrl) ?? originOf(configuredUrl) ?? "http://localhost:5173"
+  );
+}
+
 /**
  * Artifacts remotes cannot use a custom domain: the remote is always served
  * from `<account>.artifacts.cloudflare.net`. When the app has a public origin,

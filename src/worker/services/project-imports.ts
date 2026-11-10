@@ -23,6 +23,7 @@ import type { ArtifactsRepoInfo, GitStorage } from "@worker/artifacts";
 import { isArtifactsErrorCode } from "@worker/artifacts/types";
 import { AppError, conflict, isUniqueViolation } from "@worker/lib/errors";
 import { recordAudit, recordEvent } from "./events";
+import { resolveAppOrigin } from "./public-remote";
 import {
   getProviderRepository,
   parseProviderRepositoryUrl,
@@ -79,6 +80,7 @@ interface BeginImportInput {
   depth?: number;
   artifactsRepoName: string;
   previousRepoName: string | null;
+  requestUrl?: string;
 }
 
 export function importSummary(row: ProjectImport): ProjectImportSummary {
@@ -128,16 +130,19 @@ async function sha256Hex(value: string): Promise<string> {
     .join("");
 }
 
-function assertProxyOrigin(env: Env): void {
-  const appUrl = new URL(env.APP_URL);
-  if (env.ARTIFACTS_FAKE !== "true" && appUrl.protocol !== "https:") {
-    throw conflict("Private repository imports require a public HTTPS APP_URL");
+function assertProxyOrigin(env: Env, requestUrl?: string): string {
+  const origin = resolveAppOrigin(requestUrl, env.APP_URL);
+  if (env.ARTIFACTS_FAKE !== "true" && !origin.startsWith("https://")) {
+    throw conflict(
+      "Private repository imports require a public https hostname"
+    );
   }
+  return origin;
 }
 
-function proxyUrl(env: Env, rawToken: string): string {
-  assertProxyOrigin(env);
-  return `${new URL(env.APP_URL).origin}/api/v1/import-proxy/${rawToken}/repo.git`;
+function proxyUrl(env: Env, rawToken: string, requestUrl?: string): string {
+  const origin = assertProxyOrigin(env, requestUrl);
+  return `${origin}/api/v1/import-proxy/${rawToken}/repo.git`;
 }
 
 async function createProxySession(
@@ -146,7 +151,8 @@ async function createProxySession(
   importId: string,
   provider: GitProvider,
   repository: ProviderRepository,
-  token: string
+  token: string,
+  requestUrl?: string
 ): Promise<string> {
   const rawToken =
     IMPORT_TOKEN_PREFIX + base64Url(crypto.getRandomValues(new Uint8Array(32)));
@@ -164,7 +170,7 @@ async function createProxySession(
     encryptedToken,
     expiresAt: new Date(Date.now() + IMPORT_PROXY_TTL_SECONDS * 1_000),
   });
-  return proxyUrl(env, rawToken);
+  return proxyUrl(env, rawToken, requestUrl);
 }
 
 function importFailureMessage(error: unknown): string {
@@ -454,7 +460,7 @@ async function beginImport(
   input: BeginImportInput
 ): Promise<ProjectImport> {
   if (input.repository.private) {
-    assertProxyOrigin(env);
+    assertProxyOrigin(env, input.requestUrl);
     if (!input.token) {
       throw conflict(
         `Connect your ${GIT_PROVIDER_LABELS[input.provider]} account to import a private repository`
@@ -510,7 +516,8 @@ async function beginImport(
           job.id,
           input.provider,
           input.repository,
-          input.token!
+          input.token!,
+          input.requestUrl
         )
       : input.repository.remoteUrl;
 
@@ -596,7 +603,8 @@ async function createWithResolvedRepository(
   input: ImportProjectFields,
   provider: GitProvider,
   repository: ProviderRepository,
-  token: string | undefined
+  token: string | undefined,
+  requestUrl?: string
 ): Promise<{ project: Project; import: ProjectImport }> {
   const project = await createProjectShell(
     db,
@@ -621,6 +629,7 @@ async function createWithResolvedRepository(
     depth: input.depth,
     artifactsRepoName: project.artifactsRepoName,
     previousRepoName: null,
+    requestUrl,
   });
   const [updated] = await db
     .select()
@@ -636,7 +645,8 @@ export async function createImportedProject(
   env: ProviderEnv,
   creatorId: string,
   input: CreateImportedProjectInput,
-  token: string
+  token: string,
+  requestUrl?: string
 ): Promise<{ project: Project; import: ProjectImport }> {
   const repository = await getProviderRepository(
     input.provider,
@@ -652,7 +662,8 @@ export async function createImportedProject(
     input,
     input.provider,
     repository,
-    token
+    token,
+    requestUrl
   );
 }
 
@@ -662,7 +673,8 @@ export async function createImportedProjectFromUrl(
   env: ProviderEnv,
   creatorId: string,
   input: CreateImportedProjectFromUrlInput,
-  token?: string
+  token?: string,
+  requestUrl?: string
 ): Promise<{ project: Project; import: ProjectImport }> {
   const parsed = parseProviderRepositoryUrl(input.sourceUrl, env);
   let repository: ProviderRepository;
@@ -691,7 +703,8 @@ export async function createImportedProjectFromUrl(
     input,
     parsed.provider,
     repository,
-    token
+    token,
+    requestUrl
   );
 }
 
@@ -702,7 +715,7 @@ export async function reimportProject(
   project: Project,
   requestedBy: string,
   token: string | undefined,
-  options: { branch?: string; depth?: number } = {}
+  options: { branch?: string; depth?: number; requestUrl?: string } = {}
 ): Promise<ProjectImport> {
   const last = await latestProjectImport(db, project.id);
   if (!last) {
@@ -748,6 +761,7 @@ export async function reimportProject(
     depth: options.depth ?? last.depth ?? undefined,
     artifactsRepoName: newArtifactsRepoName(),
     previousRepoName: project.artifactsRepoName,
+    requestUrl: options.requestUrl,
   });
 }
 

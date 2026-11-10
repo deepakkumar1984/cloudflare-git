@@ -41,7 +41,10 @@ import {
   revokeProjectTokens,
   revokeUserProjectTokens,
 } from "@worker/services/git-tokens";
-import { publicGitRemote } from "@worker/services/public-remote";
+import {
+  publicGitRemote,
+  resolveAppOrigin,
+} from "@worker/services/public-remote";
 import {
   projectVisibilityAllowed,
   provisionProject,
@@ -146,7 +149,7 @@ projectRoutes.get(
         ...projectSummary(project, role),
         artifactsRemote: publicGitRemote(
           project.artifactsRemote,
-          c.env.APP_URL
+          resolveAppOrigin(c.req.url, c.env.APP_URL)
         ),
         openIssues: issueCount?.value ?? 0,
         openMergeRequests: mrCount?.value ?? 0,
@@ -410,7 +413,10 @@ projectRoutes.post(
     c.header("Cache-Control", "no-store");
     return c.json({
       ...credentials,
-      remote: publicGitRemote(credentials.remote, c.env.APP_URL),
+      remote: publicGitRemote(
+        credentials.remote,
+        resolveAppOrigin(c.req.url, c.env.APP_URL)
+      ),
     });
   }
 );

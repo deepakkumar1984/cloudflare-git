@@ -200,9 +200,11 @@ Cloudflare account. Wrangler creates the DNS record and certificate on deploy.
 
 The [Deploy to Cloudflare](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
 button clones this repository into your Git account and provisions the Worker,
-D1 database, and workflow. `ENVIRONMENT` defaults to `production`. Before it
-deploys, set `APP_URL` to the public https origin and set `BETTER_AUTH_URL` to
-that same origin.
+D1 database, and workflow. `ENVIRONMENT` defaults to `production`. You do not
+need the public URL before the first deploy. Open the `workers.dev` hostname
+Cloudflare shows after deploy. Auth, clone URLs, and private imports use that
+request hostname. Set `APP_URL` and `BETTER_AUTH_URL` only when you want one
+fixed origin instead.
 
 `npm run deploy` applies remote D1 migrations for the `DB` binding, then runs
 `wrangler deploy` with the vars in `wrangler.jsonc`. When you deploy from
@@ -310,10 +312,11 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
    objects are not in that export; they stay in the Artifacts namespace from
    setup.
 
-3. **Set production secrets, then deploy.** Use the Deploy to Cloudflare button,
-   or set `APP_URL` and `BETTER_AUTH_URL` to the public https origin before
-   `npm run deploy`. `ENVIRONMENT` is already `production`. `APP_URL` must be
-   that public origin, including for the private-import proxy and Git proxy.
+3. **Set production secrets, then deploy.** Use the Deploy to Cloudflare button
+   or `npm run deploy`. `ENVIRONMENT` is already `production`. The public
+   hostname is the one Cloudflare serves. The Worker reads it from each
+   request, including for the private-import proxy and Git proxy. Set `APP_URL`
+   only to force a single origin.
    Setup can deploy with those overrides and copy secrets from `.dev.vars`, or
    you can do it yourself:
 
