@@ -3,7 +3,11 @@ import { betterAuth } from "better-auth";
 import { username } from "better-auth/plugins";
 import type { Database } from "@db/client";
 import * as schema from "@db/schema";
-import { USERNAME_RE, configuredAppName } from "@shared/constants";
+import {
+  USERNAME_RE,
+  configuredAppName,
+  isProductionEnvironment,
+} from "@shared/constants";
 import { ensurePersonalGroup } from "@worker/services/personal-groups";
 import { resolveAppOrigin } from "@worker/services/public-remote";
 
@@ -14,7 +18,7 @@ export function createAuth(db: Database, env: Env, requestUrl?: string) {
   if (env.PROVIDER_TOKEN_KEY && env.PROVIDER_TOKEN_KEY.length < 32) {
     throw new Error("PROVIDER_TOKEN_KEY must be at least 32 characters");
   }
-  const production = (env.ENVIRONMENT as string) === "production";
+  const production = isProductionEnvironment(env.ENVIRONMENT);
   const adminEmails = new Set(
     (env.ADMIN_EMAILS || "")
       .split(",")

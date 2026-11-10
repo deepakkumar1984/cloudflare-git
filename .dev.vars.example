@@ -5,9 +5,6 @@ BETTER_AUTH_SECRET=replace-with-openssl-rand-base64-32
 # Keep this stable across environments that share a database. Rotating it
 # means users must reconnect GitHub and GitLab.
 PROVIDER_TOKEN_KEY=replace-with-another-openssl-rand-base64-32
-# ENVIRONMENT, BETTER_AUTH_URL, and ADMIN_EMAILS are plain text vars in
-# wrangler.jsonc, not secrets. Uncomment the next line for local dev only.
-# ENVIRONMENT=development
 # Local only. Do not set ARTIFACTS_FAKE=true on a deployed Worker.
 # ARTIFACTS_FAKE=true
 # Optional self-hosted GitLab base URL. Defaults to https://gitlab.com.

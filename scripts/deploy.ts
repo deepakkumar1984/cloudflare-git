@@ -22,8 +22,6 @@ const deploy = spawnSync(
     "--var",
     `BETTER_AUTH_URL:${config.appUrl}`,
     "--var",
-    "ENVIRONMENT:production",
-    "--var",
     `APP_NAME:${config.appName}`,
   ],
   {

@@ -103,9 +103,6 @@
       "ARTIFACTS_NAMESPACE": {
         "description": "Artifacts namespace for this Worker. Use a different namespace for each environment."
       },
-      "ENVIRONMENT": {
-        "description": "Plain text. Defaults to production. Set development in `.dev.vars` for local dev only."
-      },
       "BETTER_AUTH_SECRET": {
         "description": "Session signing secret. Generate one with `openssl rand -base64 32`."
       },
@@ -116,7 +113,7 @@
         "description": "Encrypts saved GitHub and GitLab tokens. Generate a second value with `openssl rand -base64 32`. Keep it stable, or users must reconnect providers."
       },
       "ADMIN_EMAILS": {
-        "description": "Plain text, not a secret. Comma-separated emails that become admins when those people sign up. Can be empty."
+        "description": "Comma-separated emails that become admins when those people sign up. Leave empty if you have none. This is plain text."
       }
     }
   }

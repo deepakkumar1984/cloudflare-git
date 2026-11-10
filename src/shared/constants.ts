@@ -8,6 +8,11 @@ export function configuredAppName(value: string | undefined): string {
   return name || DEFAULT_APP_NAME;
 }
 
+/** Deployed Workers omit this var and run as production. Local dev sets `development`. */
+export function isProductionEnvironment(environment: string | undefined): boolean {
+  return environment !== "development";
+}
+
 export const ROLES = [
   "guest",
   "reporter",

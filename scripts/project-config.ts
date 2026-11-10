@@ -153,7 +153,6 @@ export function wranglerConfigObject(
     BETTER_AUTH_URL: "http://localhost:5173",
     ADMIN_EMAILS: "",
     ARTIFACTS_NAMESPACE: config.artifactsNamespace,
-    ENVIRONMENT: "production",
   };
   object.artifacts = [
     {

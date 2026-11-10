@@ -3,12 +3,14 @@ import type { Group, Project } from "@db/schema";
 import type { Role } from "@shared/constants";
 import type { Auth, AuthSession } from "./auth";
 
-// Secrets and local-only flags live in `.dev.vars` or `wrangler secret put`.
-// ENVIRONMENT, BETTER_AUTH_URL, and ADMIN_EMAILS are plain text vars in
-// wrangler.jsonc.
+// Secrets live in `.dev.vars` or `wrangler secret put`.
+// BETTER_AUTH_URL and ADMIN_EMAILS are plain text vars in wrangler.jsonc.
+// ENVIRONMENT is unset on deploy, which means production. Local dev sets
+// `development` in `.dev.vars`.
 declare global {
   interface Env {
     BETTER_AUTH_SECRET: string;
+    ENVIRONMENT?: string;
     PROVIDER_TOKEN_KEY?: string;
     ARTIFACTS_FAKE?: string;
     GITLAB_BASE_URL?: string;

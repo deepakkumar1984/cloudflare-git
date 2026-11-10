@@ -91,7 +91,7 @@ const FAKE_GITLAB_REPOSITORIES: ProviderRepository[] = [
 function useFakeProviders(env: ProviderEnv): boolean {
   return (
     env.GIT_PROVIDERS_FAKE === "true" &&
-    (env.ENVIRONMENT as string) !== "production"
+    (env.ENVIRONMENT as string) === "development"
   );
 }
 

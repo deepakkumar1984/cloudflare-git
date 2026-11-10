@@ -2,6 +2,7 @@ import type { MiddlewareHandler } from "hono";
 import { createDatabase } from "@db/client";
 import { isArtifactsErrorCode } from "@worker/artifacts/types";
 import { createAuth } from "@worker/auth";
+import { isProductionEnvironment } from "@shared/constants";
 import type { AppEnv } from "@worker/env";
 import { AppError, forbidden } from "@worker/lib/errors";
 
@@ -25,7 +26,7 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.header("X-Frame-Options", "DENY");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   c.header("Cross-Origin-Resource-Policy", "same-origin");
-  if ((c.env.ENVIRONMENT as string) === "production") {
+  if (isProductionEnvironment(c.env.ENVIRONMENT)) {
     c.header(
       "Strict-Transport-Security",
       "max-age=31536000; includeSubDomains"

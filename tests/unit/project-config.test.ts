@@ -37,7 +37,6 @@ describe("project config", () => {
         APP_URL: string;
         BETTER_AUTH_URL: string;
         ADMIN_EMAILS: string;
-        ENVIRONMENT: string;
       };
     };
     expect(rendered.name).toBe("cloudflare-git");
@@ -49,9 +48,9 @@ describe("project config", () => {
     expect(rendered.workflows[0]?.name).toBe(workflowName("cloudflare-git"));
     expect(rendered.vars.APP_NAME).toBe("Cloudflare Git");
     expect(rendered.vars.APP_URL).toBe("http://localhost:5173");
-    expect(rendered.vars.ENVIRONMENT).toBe("production");
     expect(rendered.vars.BETTER_AUTH_URL).toBe("http://localhost:5173");
     expect(rendered.vars.ADMIN_EMAILS).toBe("");
+    expect("ENVIRONMENT" in rendered.vars).toBe(false);
     const example = readFileSync("wrangler.example.jsonc", "utf8")
       .split("\n")
       .filter((line) => !line.trim().startsWith("//"))

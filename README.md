@@ -125,9 +125,10 @@ npm run dev
 ```
 
 Open <http://localhost:5173>, create an account, and create a group/project.
-`ENVIRONMENT`, `BETTER_AUTH_URL`, and `ADMIN_EMAILS` are plain text vars in
-`wrangler.jsonc`, not secrets. Emails listed in `ADMIN_EMAILS` are promoted to
-admin on account creation; an admin bypasses membership checks.
+A deployed Worker runs as production without an `ENVIRONMENT` setting. Add
+`ENVIRONMENT=development` to `.dev.vars` for local dev only. `ADMIN_EMAILS` is
+a plain text var in `wrangler.jsonc`, not a secret. Emails listed there are
+promoted to admin on account creation; an admin bypasses membership checks.
 
 ### Fake repository data
 
@@ -199,7 +200,7 @@ Cloudflare account. Wrangler creates the DNS record and certificate on deploy.
 
 The [Deploy to Cloudflare](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
 button clones this repository into your Git account and provisions the Worker,
-D1 database, and workflow. `ENVIRONMENT` defaults to `production`. You do not
+D1 database, and workflow. You do not
 need the public URL before the first deploy. Open the `workers.dev` hostname
 Cloudflare shows after deploy. Auth, clone URLs, and private imports use that
 request hostname. Set `APP_URL` and `BETTER_AUTH_URL` only when you want one
@@ -214,12 +215,12 @@ the local defaults for that deployment:
 APP_URL=<public origin from setup>
 BETTER_AUTH_URL=<same origin>
 APP_NAME=<app name from setup>
-ENVIRONMENT=production
 ```
 
-Local `wrangler.jsonc` keeps `APP_URL=http://localhost:5173`. `ENVIRONMENT` in
-that file is `production`, and `.dev.vars` sets `ENVIRONMENT=development` for
-`npm run dev`. Run `npm run setup` again when the public URL or domain changes.
+Local `wrangler.jsonc` keeps `APP_URL=http://localhost:5173`. A deploy with no
+`ENVIRONMENT` var runs as production. `.dev.vars` sets
+`ENVIRONMENT=development` for `npm run dev`. Run `npm run setup` again when the
+public URL or domain changes.
 
 Artifacts has no custom-domain support: the real remote is always
 `https://<ACCOUNT_ID>.artifacts.cloudflare.net/git/<namespace>/<repo>.git`. The
@@ -312,7 +313,8 @@ Set `PLAYWRIGHT_CHROME_PATH=/path/to/chrome` to use a system browser instead.
    setup.
 
 3. **Set production secrets, then deploy.** Use the Deploy to Cloudflare button
-   or `npm run deploy`. `ENVIRONMENT` is already `production`. The public
+   or `npm run deploy`. The Worker runs as production unless local
+   `.dev.vars` sets `ENVIRONMENT=development`. The public
    hostname is the one Cloudflare serves. The Worker reads it from each
    request, including for the private-import proxy and Git proxy. Set `APP_URL`
    only to force a single origin.
