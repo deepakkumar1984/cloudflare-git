@@ -147,7 +147,7 @@ export interface MemberUser {
   name: string;
   username: string | null;
   displayUsername: string | null;
-  email: string;
+  email: string | null;
   image: string | null;
 }
 

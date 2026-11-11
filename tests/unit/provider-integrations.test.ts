@@ -32,9 +32,15 @@ describe("provider token encryption", () => {
         PROVIDER_TOKEN_KEY: "provider-key-".repeat(3),
       })
     ).toBe("provider-key-".repeat(3));
-    expect(providerTokenSecret({ BETTER_AUTH_SECRET: authSecret })).toBe(
-      authSecret
-    );
+    expect(
+      providerTokenSecret({
+        BETTER_AUTH_SECRET: authSecret,
+        ENVIRONMENT: "development",
+      })
+    ).toBe(authSecret);
+    expect(() =>
+      providerTokenSecret({ BETTER_AUTH_SECRET: authSecret })
+    ).toThrow(/PROVIDER_TOKEN_KEY/);
     expect(() =>
       providerTokenSecret({
         BETTER_AUTH_SECRET: authSecret,

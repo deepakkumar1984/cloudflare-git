@@ -373,19 +373,25 @@ authenticated users. Confidential issues require reporter access or higher.
 - Raw repository files are always served as attachments with `nosniff` and a
   sandboxed CSP so user-controlled HTML/SVG is never rendered same-origin.
 - Markdown is rendered through `react-markdown` + `rehype-sanitize`; raw HTML is
-  not enabled.
-- Unsafe API methods enforce same-origin checks. Better Auth handles sessions in
-  HttpOnly, SameSite=Lax cookies.
-- Provider tokens are encrypted at rest with AES-GCM under
-  `PROVIDER_TOKEN_KEY`; the API returns only connection metadata. The import
-  proxy exposes a random, short-lived capability
-  in its URL to Artifacts, so treat proxy URLs as secrets and do not add request
-  URL logging that captures path segments without redaction.
+  not enabled, and remote images are stripped.
+- Unsafe API methods require a same-origin `Origin` header when a session
+  cookie is present. Better Auth handles sessions in HttpOnly, SameSite=Lax
+  cookies. Sign-in limits are stored in D1.
+- Production signup is closed after the first account. Set
+  `ALLOW_PUBLIC_SIGNUP=true` only when you want open registration. Admin is
+  granted only to that first account, and only when its email is in
+  `ADMIN_EMAILS`.
+- `PROVIDER_TOKEN_KEY` is required in production. Provider tokens are encrypted
+  at rest with AES-GCM under that key. The API returns only connection metadata.
+  The import proxy puts a random, short-lived capability in its URL, and
+  invocation logs are off so that path is not stored. Disconnecting a provider
+  revokes import sessions that still hold the token.
+- Preview URLs are off. They would run with this Worker's D1 database and secrets.
 - Artifacts cannot enforce protected branches: any developer with a write token
   can push any branch, including the default branch. This is a documented M1
   limitation, not an app bug.
-- M1 does not include email verification or password reset. Treat it as an
-  internal/controlled-use release until those are added.
+- There is still no email verification or password reset. Treat a public deploy
+  as an internal release until those exist.
 
 ## License
 

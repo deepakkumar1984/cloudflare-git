@@ -1,6 +1,12 @@
+import { count } from "drizzle-orm";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { configuredAppName } from "@shared/constants";
+import { user } from "@db/schema";
+import {
+  configuredAppName,
+  isProductionEnvironment,
+  publicSignupAllowed,
+} from "@shared/constants";
 import type { AppEnv } from "./env";
 import { errorResponse } from "./middleware/context";
 import {
@@ -38,18 +44,32 @@ export function createApp() {
     requestContext
   );
 
-  app.get("/api/meta", (c) =>
-    c.json({ appName: configuredAppName(c.env.APP_NAME) })
-  );
+  app.get("/api/meta", async (c) => {
+    const [existing] = await c.get("db").select({ value: count() }).from(user);
+    return c.json({
+      appName: configuredAppName(c.env.APP_NAME),
+      signupOpen: publicSignupAllowed(
+        c.env.ENVIRONMENT,
+        c.env.ALLOW_PUBLIC_SIGNUP,
+        (existing?.value ?? 0) > 0
+      ),
+    });
+  });
 
   app.get("/api/health", async (c) => {
     try {
       await c.env.DB.prepare("select 1 as ok").first();
+      const production = isProductionEnvironment(c.env.ENVIRONMENT);
       return c.json({
         ok: true,
-        environment: c.env.ENVIRONMENT,
-        artifacts: c.env.ARTIFACTS_FAKE === "true" ? "fake" : "live",
         time: new Date().toISOString(),
+        // Local and E2E checks read the adapter mode. Production stays quiet.
+        ...(production
+          ? {}
+          : {
+              environment: c.env.ENVIRONMENT,
+              artifacts: c.env.ARTIFACTS_FAKE === "true" ? "fake" : "live",
+            }),
       });
     } catch (error) {
       console.error("health_check_failed", error);

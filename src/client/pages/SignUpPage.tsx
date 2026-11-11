@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth";
+import { useAppMeta } from "@/lib/meta";
 import { USERNAME_RE } from "@shared/constants";
 
 function suggestedUsername(value: string): string {
@@ -21,6 +22,7 @@ export function SignUpPage() {
   const session = authClient.useSession();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { signupOpen } = useAppMeta();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [usernameTouched, setUsernameTouched] = useState(false);
@@ -34,6 +36,28 @@ export function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
 
   if (session.data) return <Navigate to="/" replace />;
+
+  if (!signupOpen) {
+    return (
+      <AuthLayout
+        title="Sign up is closed."
+        subtitle="This server is not accepting new accounts."
+      >
+        <p className="text-sm text-muted">
+          Ask an owner to create your account, or sign in if you already have
+          one.
+        </p>
+        <p className="mt-7 text-center text-sm text-muted">
+          <Link
+            to="/sign-in"
+            className="font-medium text-accent underline-offset-4 hover:underline"
+          >
+            Back to sign in
+          </Link>
+        </p>
+      </AuthLayout>
+    );
+  }
 
   const usernameValid = USERNAME_RE.test(username);
 

@@ -107,6 +107,14 @@ export const verification = sqliteTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)]
 );
 
+/** Shared by Better Auth's database limiter and the app's own quotas. */
+export const rateLimit = sqliteTable("rate_limit", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: integer("last_request").notNull(),
+});
+
 /* -------------------------------------------------------------------------- */
 /* Enum values (stored as text; SQLite has no native enums)                  */
 /* -------------------------------------------------------------------------- */

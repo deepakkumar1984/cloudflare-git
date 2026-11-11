@@ -4,6 +4,7 @@ import { DEFAULT_APP_NAME } from "@shared/constants";
 
 type AppMeta = {
   appName: string;
+  signupOpen: boolean;
 };
 
 async function loadAppMeta(): Promise<AppMeta> {
@@ -12,10 +13,10 @@ async function loadAppMeta(): Promise<AppMeta> {
   const body = (await response.json()) as Partial<AppMeta>;
   const appName = body.appName?.trim();
   if (!appName) throw new Error("App name is missing");
-  return { appName };
+  return { appName, signupOpen: body.signupOpen !== false };
 }
 
-export function useAppName(): string {
+export function useAppMeta(): AppMeta {
   const query = useQuery({
     queryKey: ["meta"],
     queryFn: loadAppMeta,
@@ -27,5 +28,9 @@ export function useAppName(): string {
     document.title = appName;
   }, [appName]);
 
-  return appName;
+  return { appName, signupOpen: query.data?.signupOpen !== false };
+}
+
+export function useAppName(): string {
+  return useAppMeta().appName;
 }

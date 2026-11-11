@@ -17,6 +17,10 @@ import {
   confidentialProjectIds,
   viewableProjectIds,
 } from "@worker/services/access";
+import {
+  presentActivityMetadata,
+  readableActivityCondition,
+} from "@worker/services/events";
 import { ensurePersonalGroup } from "@worker/services/personal-groups";
 import { unauthorized } from "@worker/lib/errors";
 
@@ -168,6 +172,7 @@ meRoutes.get("/dashboard", async (c) => {
           createdAt: events.createdAt,
           metadata: events.metadata,
           targetIid: events.targetIid,
+          projectId: events.projectId,
           projectSlug: projects.slug,
           projectName: projects.name,
           groupSlug: groups.slug,
@@ -178,19 +183,31 @@ meRoutes.get("/dashboard", async (c) => {
         .leftJoin(projects, eq(events.projectId, projects.id))
         .leftJoin(groups, eq(projects.groupId, groups.id))
         .leftJoin(user, eq(events.actorId, user.id))
-        .where(inArray(events.projectId, ids))
+        .where(
+          and(
+            inArray(events.projectId, ids),
+            readableActivityCondition(confidentialIds)
+          )
+        )
         .orderBy(desc(events.createdAt))
         .limit(20),
     ]);
 
+  const codeProjectIds = new Set(confidentialIds);
   return c.json({
     assignedIssues,
     reviewRequests,
     recentProjects,
     activity: activity.map((item) => {
-      const metadata = item.metadata as Record<string, unknown>;
-      const { title: _title, ...safeMetadata } = metadata;
-      return { ...item, metadata: safeMetadata };
+      const { projectId: _projectId, ...visible } = item;
+      return {
+        ...visible,
+        metadata: presentActivityMetadata(
+          item.action,
+          item.metadata as Record<string, unknown>,
+          item.projectId ? codeProjectIds.has(item.projectId) : false
+        ),
+      };
     }),
   });
 });

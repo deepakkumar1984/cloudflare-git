@@ -34,17 +34,19 @@ import {
   isUniqueViolation,
   notFound,
   readJson,
+  tooManyRequests,
 } from "@worker/lib/errors";
+import { consumeRateLimit } from "@worker/lib/rate-limit";
 
 export const groupRoutes = new Hono<AppEnv>();
 
-function memberUser(row: typeof user.$inferSelect) {
+function memberUser(row: typeof user.$inferSelect, includeEmail: boolean) {
   return {
     id: row.id,
     name: row.name,
     username: row.username,
     displayUsername: row.displayUsername,
-    email: row.email,
+    email: includeEmail ? row.email : null,
     image: row.image,
   };
 }
@@ -301,13 +303,14 @@ groupRoutes.get("/groups/:groupSlug/members", loadGroup, async (c) => {
     .where(eq(groupMembers.groupId, group.id))
     .orderBy(groupMembers.createdAt);
 
+  const includeEmail = canManageGroup(role);
   return c.json({
     members: rows.map(({ member, person }) => ({
       role: member.role,
       createdAt: member.createdAt,
-      user: memberUser(person),
+      user: memberUser(person, includeEmail),
     })),
-    canManage: canManageGroup(role),
+    canManage: includeEmail,
   });
 });
 
@@ -320,6 +323,18 @@ groupRoutes.post("/groups/:groupSlug/members", loadGroup, async (c) => {
     throw conflict("Personal groups cannot have extra members");
   const db = c.get("db");
   const input = await readJson(c, memberAddSchema);
+  const lookup = await consumeRateLimit(
+    db,
+    `member-lookup:${session.user.id}`,
+    30,
+    60_000
+  );
+  if (!lookup.allowed) {
+    throw tooManyRequests(
+      "Too many member lookups. Wait a minute and try again.",
+      lookup.retryAfterSeconds
+    );
+  }
   const target = await findUserByIdentifier(db, input.identifier);
   if (!target) throw notFound("No user found with that username or email");
 
@@ -351,7 +366,7 @@ groupRoutes.post("/groups/:groupSlug/members", loadGroup, async (c) => {
       {
         member: {
           role: member?.role ?? input.role,
-          user: memberUser(target),
+          user: memberUser(target, true),
         },
       },
       201
@@ -366,25 +381,19 @@ groupRoutes.post("/groups/:groupSlug/members", loadGroup, async (c) => {
   }
 });
 
-async function assertNotLastOwner(
-  db: AppEnv["Variables"]["db"],
-  groupId: string,
-  targetUserId: string,
-  nextRole: string | null
-): Promise<void> {
-  if (nextRole === "owner") return;
-  const owners = await db
-    .select({ userId: groupMembers.userId })
-    .from(groupMembers)
-    .where(
-      and(eq(groupMembers.groupId, groupId), eq(groupMembers.role, "owner"))
-    );
-  if (
-    owners.length <= 1 &&
-    owners.some((owner) => owner.userId === targetUserId)
-  ) {
-    throw conflict("A group must have at least one owner");
-  }
+/**
+ * Keeps the write itself from removing the last owner. Two overlapping
+ * requests serialize on D1, so the second sees the first commit and stops.
+ */
+function keepsAnOwner(groupId: string, removingOwner: boolean) {
+  if (!removingOwner) return undefined;
+  return sql`(
+    ${groupMembers.role} != 'owner'
+    or (
+      select count(*) from group_members
+      where group_id = ${groupId} and role = 'owner'
+    ) > 1
+  )`;
 }
 
 groupRoutes.patch(
@@ -413,7 +422,6 @@ groupRoutes.patch(
       )
       .limit(1);
     if (!target) throw notFound("Member not found");
-    await assertNotLastOwner(db, group.id, targetUserId, input.role);
 
     const [updated] = await db
       .update(groupMembers)
@@ -421,10 +429,12 @@ groupRoutes.patch(
       .where(
         and(
           eq(groupMembers.groupId, group.id),
-          eq(groupMembers.userId, targetUserId)
+          eq(groupMembers.userId, targetUserId),
+          keepsAnOwner(group.id, input.role !== "owner")
         )
       )
       .returning();
+    if (!updated) throw conflict("A group must have at least one owner");
 
     const storage = getGitStorage(c.env);
     await revokeUserGroupTokens(db, storage, group.id, targetUserId);
@@ -459,18 +469,31 @@ groupRoutes.delete(
     const targetUserId = c.req.param("userId");
     if (!targetUserId) throw notFound("Member not found");
     const db = c.get("db");
-    await assertNotLastOwner(db, group.id, targetUserId, null);
 
     const deleted = await db
       .delete(groupMembers)
       .where(
         and(
           eq(groupMembers.groupId, group.id),
-          eq(groupMembers.userId, targetUserId)
+          eq(groupMembers.userId, targetUserId),
+          keepsAnOwner(group.id, true)
         )
       )
       .returning({ userId: groupMembers.userId });
-    if (deleted.length === 0) throw notFound("Member not found");
+    if (deleted.length === 0) {
+      const [stillThere] = await db
+        .select({ userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(
+          and(
+            eq(groupMembers.groupId, group.id),
+            eq(groupMembers.userId, targetUserId)
+          )
+        )
+        .limit(1);
+      if (stillThere) throw conflict("A group must have at least one owner");
+      throw notFound("Member not found");
+    }
 
     const storage = getGitStorage(c.env);
     await revokeUserGroupTokens(db, storage, group.id, targetUserId);

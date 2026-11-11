@@ -73,7 +73,8 @@ projectImportRoutes.post(
         "Project visibility cannot be broader than its group visibility"
       );
     }
-    const rate = consumeRateLimit(
+    const rate = await consumeRateLimit(
+      c.get("db"),
       `project-import:${session.user.id}`,
       10,
       60_000
@@ -135,7 +136,8 @@ projectImportRoutes.post(
         "Project visibility cannot be broader than its group visibility"
       );
     }
-    const rate = consumeRateLimit(
+    const rate = await consumeRateLimit(
+      c.get("db"),
       `project-import:${session.user.id}`,
       10,
       60_000
@@ -227,7 +229,8 @@ projectImportRoutes.post(
         "This project was not created from an external repository"
       );
     }
-    const rate = consumeRateLimit(
+    const rate = await consumeRateLimit(
+      c.get("db"),
       `project-reimport:${session.user.id}:${project.id}`,
       5,
       60_000

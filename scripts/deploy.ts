@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { readProjectConfig } from "./project-config";
 
+const check = spawnSync("npx", ["tsx", "scripts/check-deploy.ts"], {
+  stdio: "inherit",
+});
+if (check.status !== 0) process.exit(check.status ?? 1);
+
 const config = readProjectConfig();
 if (!config?.appUrl) {
   console.error(

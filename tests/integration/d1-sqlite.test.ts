@@ -91,7 +91,7 @@ describe("SQLite auth and dates", () => {
   it("returns the configured app name without a session", async () => {
     const meta = await call("/api/meta");
     expect(meta.status).toBe(200);
-    expect(meta.json).toEqual({ appName: "Test Forge" });
+    expect(meta.json).toEqual({ appName: "Test Forge", signupOpen: true });
   });
 
   it("signs up, expires the session, and signs in again", async () => {

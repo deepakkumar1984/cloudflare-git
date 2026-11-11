@@ -1,12 +1,17 @@
+import { count } from "drizzle-orm";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { username } from "better-auth/plugins";
 import type { Database } from "@db/client";
 import * as schema from "@db/schema";
 import {
   USERNAME_RE,
   configuredAppName,
+  firstAccountMustMatchAdminList,
+  grantInitialAdmin,
   isProductionEnvironment,
+  publicSignupAllowed,
 } from "@shared/constants";
 import { ensurePersonalGroup } from "@worker/services/personal-groups";
 import { resolveAppOrigin } from "@worker/services/public-remote";
@@ -15,10 +20,15 @@ export function createAuth(db: Database, env: Env, requestUrl?: string) {
   if (!env.BETTER_AUTH_SECRET || env.BETTER_AUTH_SECRET.length < 32) {
     throw new Error("BETTER_AUTH_SECRET must be at least 32 characters");
   }
+  const production = isProductionEnvironment(env.ENVIRONMENT);
+  if (production && !env.PROVIDER_TOKEN_KEY) {
+    throw new Error(
+      "PROVIDER_TOKEN_KEY must be set in production. It encrypts GitHub and GitLab tokens separately from the auth secret."
+    );
+  }
   if (env.PROVIDER_TOKEN_KEY && env.PROVIDER_TOKEN_KEY.length < 32) {
     throw new Error("PROVIDER_TOKEN_KEY must be at least 32 characters");
   }
-  const production = isProductionEnvironment(env.ENVIRONMENT);
   const adminEmails = new Set(
     (env.ADMIN_EMAILS || "")
       .split(",")
@@ -76,6 +86,8 @@ export function createAuth(db: Database, env: Env, requestUrl?: string) {
       enabled: true,
       window: 60,
       max: 100,
+      // D1, shared across isolates. Requires the rate_limit table.
+      storage: "database",
       customRules: {
         "/sign-in/email": { window: 60, max: production ? 10 : 50 },
         "/sign-in/username": { window: 60, max: production ? 10 : 50 },
@@ -105,10 +117,40 @@ export function createAuth(db: Database, env: Env, requestUrl?: string) {
         create: {
           before: async (user) => {
             const email = String(user.email ?? "").toLowerCase();
+            const [existing] = await db
+              .select({ value: count() })
+              .from(schema.user);
+            const isFirst = (existing?.value ?? 0) === 0;
+            if (
+              !publicSignupAllowed(
+                env.ENVIRONMENT,
+                env.ALLOW_PUBLIC_SIGNUP,
+                !isFirst
+              )
+            ) {
+              throw APIError.from("FORBIDDEN", {
+                code: "SIGNUP_CLOSED",
+                message: "Sign up is closed",
+              });
+            }
+            if (
+              firstAccountMustMatchAdminList(
+                env.ENVIRONMENT,
+                isFirst,
+                adminEmails
+              ) &&
+              !adminEmails.has(email)
+            ) {
+              throw APIError.from("FORBIDDEN", {
+                code: "ADMIN_EMAIL_REQUIRED",
+                message: "The first account must use an administrator email",
+              });
+            }
             return {
               data: {
                 ...user,
-                isAdmin: adminEmails.has(email),
+                email,
+                isAdmin: grantInitialAdmin(isFirst, email, adminEmails),
               },
             };
           },

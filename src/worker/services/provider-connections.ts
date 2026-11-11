@@ -1,6 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { Database } from "@db/client";
-import { providerConnections, type ProviderConnection } from "@db/schema";
+import {
+  importProxySessions,
+  projectImports,
+  providerConnections,
+  type ProviderConnection,
+} from "@db/schema";
 import { GIT_PROVIDER_LABELS, type GitProvider } from "@shared/constants";
 import type { ProviderIdentity } from "./git-providers";
 import { decryptProviderToken, encryptProviderToken } from "./token-vault";
@@ -136,6 +141,30 @@ export async function removeProviderConnection(
   provider: GitProvider,
   ipAddress?: string | null
 ): Promise<boolean> {
+  const jobs = await db
+    .select({ id: projectImports.id })
+    .from(projectImports)
+    .where(
+      and(
+        eq(projectImports.requestedBy, userId),
+        eq(projectImports.provider, provider)
+      )
+    );
+  if (jobs.length > 0) {
+    await db
+      .update(importProxySessions)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          inArray(
+            importProxySessions.projectImportId,
+            jobs.map((job) => job.id)
+          ),
+          isNull(importProxySessions.revokedAt)
+        )
+      );
+  }
+
   const deleted = await db
     .delete(providerConnections)
     .where(

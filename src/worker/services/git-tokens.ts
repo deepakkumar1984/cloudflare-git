@@ -24,14 +24,26 @@ async function revokeGrant(
   },
   repoName: string
 ): Promise<boolean> {
-  const revoked = await storage
+  let revoked = await storage
     .revokeToken(repoName, grant.artifactsTokenId)
     .catch(() => false);
-  if (revoked) {
-    await db
-      .update(gitTokenGrants)
-      .set({ revokedAt: new Date() })
-      .where(eq(gitTokenGrants.id, grant.id));
+  if (!revoked) {
+    revoked = await storage
+      .revokeToken(repoName, grant.artifactsTokenId)
+      .catch(() => false);
+  }
+  // The local row is the app's source of truth. A failed Artifacts revoke
+  // must not leave the grant looking active, or the next mint treats the
+  // old credential as already replaced.
+  await db
+    .update(gitTokenGrants)
+    .set({ revokedAt: new Date() })
+    .where(eq(gitTokenGrants.id, grant.id));
+  if (!revoked) {
+    console.error("artifacts_token_revoke_failed", {
+      grantId: grant.id,
+      tokenId: grant.artifactsTokenId,
+    });
   }
   return revoked;
 }

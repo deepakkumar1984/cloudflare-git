@@ -76,14 +76,19 @@ export const csrfMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   }
 
   const origin = c.req.header("origin");
-  if (origin) {
-    let expected: string;
-    try {
-      expected = new URL(c.req.url).origin;
-    } catch {
-      throw forbidden("Invalid request origin");
-    }
-    if (origin !== expected) throw forbidden("Cross-origin request rejected");
+  let expected: string;
+  try {
+    expected = new URL(c.req.url).origin;
+  } catch {
+    throw forbidden("Invalid request origin");
+  }
+  // A session cookie without Origin is accepted by same-site clients that
+  // omit the header. Require the header whenever a session is present.
+  if (c.get("session") && !origin) {
+    throw forbidden("Cross-origin request rejected");
+  }
+  if (origin && origin !== expected) {
+    throw forbidden("Cross-origin request rejected");
   }
 
   const fetchSite = c.req.header("sec-fetch-site");

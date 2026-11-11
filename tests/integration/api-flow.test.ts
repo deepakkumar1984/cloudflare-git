@@ -104,6 +104,18 @@ describe("API flow", () => {
     });
     expect(group.status).toBe(201);
 
+    const me = await call("/api/v1/me", { cookie: ownerCookie });
+    const ownerId = (me.json!.user as { id: string }).id;
+    const demoteOwner = await call(
+      `/api/v1/groups/api-group/members/${ownerId}`,
+      {
+        method: "PATCH",
+        cookie: ownerCookie,
+        body: { role: "maintainer" },
+      }
+    );
+    expect(demoteOwner.status).toBe(409);
+
     const project = await call("/api/v1/groups/api-group/projects", {
       method: "POST",
       cookie: ownerCookie,
@@ -214,6 +226,44 @@ describe("API flow", () => {
     );
     expect(guestClone.status).toBe(403);
 
+    const guestMembers = await call(
+      "/api/v1/groups/api-group/projects/api-project/members",
+      { cookie: guestCookie }
+    );
+    expect(guestMembers.status).toBe(200);
+    expect(
+      (
+        guestMembers.json!.members as Array<{ user: { email: string | null } }>
+      ).every((member) => member.user.email === null)
+    ).toBe(true);
+    const ownerMembers = await call(
+      "/api/v1/groups/api-group/projects/api-project/members",
+      { cookie: ownerCookie }
+    );
+    expect(
+      (
+        ownerMembers.json!.members as Array<{ user: { email: string | null } }>
+      ).some((member) => member.user.email?.includes("@"))
+    ).toBe(true);
+
+    const missingOrigin = await app.request(
+      `${origin}/api/v1/groups`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: ownerCookie,
+        },
+        body: JSON.stringify({
+          slug: "no-origin",
+          name: "No origin",
+          description: "",
+        }),
+      },
+      env
+    );
+    expect(missingOrigin.status).toBe(403);
+
     const guestIssues = await call(
       "/api/v1/groups/api-group/projects/api-project/issues?state=all",
       { cookie: guestCookie }
@@ -255,6 +305,22 @@ describe("API flow", () => {
     );
     expect(mr.status).toBe(201);
     const iid = (mr.json!.mergeRequest as { iid: number }).iid;
+
+    const guestDiff = await call(
+      `/api/v1/groups/api-group/projects/api-project/merge_requests/${iid}/diff`,
+      { cookie: guestCookie }
+    );
+    expect(guestDiff.status).toBe(403);
+    const guestPatch = await call(
+      `/api/v1/groups/api-group/projects/api-project/merge_requests/${iid}/diff/file?path=README.md`,
+      { cookie: guestCookie }
+    );
+    expect(guestPatch.status).toBe(403);
+    const guestCommits = await call(
+      `/api/v1/groups/api-group/projects/api-project/merge_requests/${iid}/commits`,
+      { cookie: guestCookie }
+    );
+    expect(guestCommits.status).toBe(403);
 
     const reviewerFilter = await call(
       `/api/v1/groups/api-group/projects/api-project/merge_requests?reviewer=${reviewerId}`,

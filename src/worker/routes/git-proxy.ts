@@ -3,6 +3,11 @@ import { Hono, type Context } from "hono";
 import { projects } from "@db/schema";
 import { configuredAppName } from "@shared/constants";
 import type { AppEnv } from "@worker/env";
+import {
+  BodyTooLargeError,
+  capBody,
+  contentLengthTooLarge,
+} from "@worker/lib/limited-body";
 
 export const gitProxyRoutes = new Hono<AppEnv>();
 
@@ -120,7 +125,17 @@ async function handleGitProxy(c: Context<AppEnv>): Promise<Response> {
   const requestUrl = new URL(c.req.url);
   const upstream = new URL(remote.toString());
   upstream.pathname = `${remotePath}/${operation}`;
-  upstream.search = requestUrl.search;
+  const service = requestUrl.searchParams.get("service");
+  if (service) {
+    if (service !== "git-upload-pack" && service !== "git-receive-pack") {
+      return proxyError("Unsupported Git service", 400);
+    }
+    upstream.searchParams.set("service", service);
+  }
+
+  if (contentLengthTooLarge(c.req.raw)) {
+    return proxyError("Request body is too large", 413);
+  }
 
   const headers = new Headers();
   for (const name of FORWARDED_REQUEST_HEADERS) {
@@ -133,10 +148,13 @@ async function handleGitProxy(c: Context<AppEnv>): Promise<Response> {
     response = await fetch(upstream, {
       method,
       headers,
-      body: method === "POST" ? c.req.raw.body : undefined,
+      body: method === "POST" ? capBody(c.req.raw.body) : undefined,
       redirect: "manual",
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return proxyError("Request body is too large", 413);
+    }
     return proxyError("Git storage is unreachable", 502);
   }
 

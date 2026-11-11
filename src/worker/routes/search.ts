@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { Hono } from "hono";
 import { groups, issues, mergeRequests, projects } from "@db/schema";
 import { likeContains } from "@shared/like";
@@ -52,9 +52,9 @@ searchRoutes.get("/search", async (c) => {
         and(
           inArray(projects.id, ids),
           or(
-            like(projects.name, pattern),
-            like(projects.slug, pattern),
-            like(projects.description, pattern)
+            sql`${projects.name} LIKE ${pattern} ESCAPE '\\'`,
+            sql`${projects.slug} LIKE ${pattern} ESCAPE '\\'`,
+            sql`${projects.description} LIKE ${pattern} ESCAPE '\\'`
           )
         )
       )
@@ -79,7 +79,10 @@ searchRoutes.get("/search", async (c) => {
         and(
           inArray(issues.projectId, ids),
           issueVisibility,
-          or(like(issues.title, pattern), like(issues.description, pattern))
+          or(
+            sql`${issues.title} LIKE ${pattern} ESCAPE '\\'`,
+            sql`${issues.description} LIKE ${pattern} ESCAPE '\\'`
+          )
         )
       )
       .orderBy(desc(issues.updatedAt))
@@ -104,8 +107,8 @@ searchRoutes.get("/search", async (c) => {
         and(
           inArray(mergeRequests.projectId, ids),
           or(
-            like(mergeRequests.title, pattern),
-            like(mergeRequests.description, pattern)
+            sql`${mergeRequests.title} LIKE ${pattern} ESCAPE '\\'`,
+            sql`${mergeRequests.description} LIKE ${pattern} ESCAPE '\\'`
           )
         )
       )

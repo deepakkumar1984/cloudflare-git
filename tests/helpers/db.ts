@@ -36,6 +36,7 @@ const DELETE_ORDER = [
   "group_members",
   "groups",
   "verification",
+  "rate_limit",
   "account",
   "session",
   "user",

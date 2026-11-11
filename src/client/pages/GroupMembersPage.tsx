@@ -161,8 +161,8 @@ export function GroupMembersPage() {
                         ) : null}
                       </p>
                       <p className="truncate text-[11px] text-faint">
-                        @{member.user.displayUsername || member.user.username} ·{" "}
-                        {member.user.email}
+                        @{member.user.displayUsername || member.user.username}
+                        {member.user.email ? ` · ${member.user.email}` : ""}
                       </p>
                     </div>
                   </div>

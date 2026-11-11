@@ -1,9 +1,22 @@
 import type { ComponentProps } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
-import rehypeSanitize from "rehype-sanitize";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+
+const markdownSchema = {
+  ...defaultSchema,
+  tagNames: (defaultSchema.tagNames ?? []).filter((tag) => tag !== "img"),
+  attributes: {
+    ...defaultSchema.attributes,
+    code: [
+      ...(defaultSchema.attributes?.code ?? []),
+      ["className", /^language-/],
+    ],
+    span: [...(defaultSchema.attributes?.span ?? []), ["className", /^hljs/]],
+  },
+};
 
 export function Markdown({
   children,
@@ -16,7 +29,7 @@ export function Markdown({
     <div className={cn("prose-md", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+        rehypePlugins={[rehypeHighlight, [rehypeSanitize, markdownSchema]]}
         components={{
           a: ({
             href,

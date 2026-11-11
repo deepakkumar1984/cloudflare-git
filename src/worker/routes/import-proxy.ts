@@ -11,6 +11,11 @@ import {
   type GitProvider,
 } from "@shared/constants";
 import type { AppEnv } from "@worker/env";
+import {
+  BodyTooLargeError,
+  capBody,
+  contentLengthTooLarge,
+} from "@worker/lib/limited-body";
 import { consumeRateLimit } from "@worker/lib/rate-limit";
 import { providerGitAuthorization } from "@worker/services/git-providers";
 import {
@@ -80,7 +85,8 @@ async function handleProxy(c: Context<AppEnv>) {
     return proxyError("Not found", 404);
   }
 
-  const limit = consumeRateLimit(
+  const limit = await consumeRateLimit(
+    c.get("db"),
     `import-proxy:${rawToken.slice(-20)}`,
     IMPORT_PROXY_MAX_REQUESTS_PER_MINUTE,
     60_000
@@ -146,6 +152,9 @@ async function handleProxy(c: Context<AppEnv>) {
   if (upstream.origin !== base.origin) {
     return proxyError("Invalid upstream", 400);
   }
+  if (contentLengthTooLarge(c.req.raw)) {
+    return proxyError("Request body is too large", 413);
+  }
 
   const headers = new Headers({
     Authorization: providerGitAuthorization(
@@ -164,11 +173,17 @@ async function handleProxy(c: Context<AppEnv>) {
     response = await fetch(upstream, {
       method,
       headers,
-      body: method === "POST" ? await c.req.arrayBuffer() : undefined,
-      redirect: "follow",
+      body: method === "POST" ? capBody(c.req.raw.body) : undefined,
+      redirect: "manual",
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return proxyError("Request body is too large", 413);
+    }
     return proxyError("Git provider unreachable", 502);
+  }
+  if (response.status >= 300 && response.status < 400) {
+    return proxyError("Git provider redirect refused", 502);
   }
 
   const responseHeaders = new Headers({

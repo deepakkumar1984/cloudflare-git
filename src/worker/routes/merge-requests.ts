@@ -5,8 +5,8 @@ import {
   desc,
   eq,
   inArray,
-  like,
   or,
+  sql,
   type SQL,
 } from "drizzle-orm";
 import { Hono, type Context } from "hono";
@@ -316,8 +316,8 @@ mergeRequestRoutes.get(
       const pattern = likeContains(query.q);
       conditions.push(
         or(
-          like(mergeRequests.title, pattern),
-          like(mergeRequests.description, pattern)
+          sql`${mergeRequests.title} LIKE ${pattern} ESCAPE '\\'`,
+          sql`${mergeRequests.description} LIKE ${pattern} ESCAPE '\\'`
         )!
       );
     }
@@ -909,6 +909,7 @@ mergeRequestRoutes.get(
   "/groups/:groupSlug/projects/:projectSlug/merge_requests/:iid/diff",
   loadProject,
   async (c) => {
+    assertRole(c, "reporter");
     const iid = Number(c.req.param("iid"));
     if (!Number.isInteger(iid) || iid < 1) {
       throw notFound("Merge request not found");
@@ -936,6 +937,7 @@ mergeRequestRoutes.get(
   "/groups/:groupSlug/projects/:projectSlug/merge_requests/:iid/diff/file",
   loadProject,
   async (c) => {
+    assertRole(c, "reporter");
     const iid = Number(c.req.param("iid"));
     if (!Number.isInteger(iid) || iid < 1) {
       throw notFound("Merge request not found");
@@ -961,6 +963,7 @@ mergeRequestRoutes.get(
   "/groups/:groupSlug/projects/:projectSlug/merge_requests/:iid/commits",
   loadProject,
   async (c) => {
+    assertRole(c, "reporter");
     const iid = Number(c.req.param("iid"));
     if (!Number.isInteger(iid) || iid < 1) {
       throw notFound("Merge request not found");

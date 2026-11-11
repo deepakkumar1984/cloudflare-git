@@ -35,4 +35,11 @@ describe("D1 statement limits", () => {
     expect(pattern.endsWith("%")).toBe(true);
     expect(pattern.includes("\uFFFD")).toBe(false);
   });
+
+  it("escapes LIKE wildcards inside the pattern", () => {
+    expect(likeContains("100%_done")).toBe("%100\\%\\_done%");
+    expect(
+      new TextEncoder().encode(likeContains("%".repeat(40))).length
+    ).toBeLessThanOrEqual(LIKE_PATTERN_MAX_BYTES);
+  });
 });

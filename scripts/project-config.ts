@@ -138,8 +138,8 @@ export function wranglerConfigObject(
   object.compatibility_date = COMPATIBILITY_DATE;
   object.compatibility_flags = ["nodejs_compat"];
   object.upload_source_maps = true;
-  object.workers_dev = true;
-  object.preview_urls = true;
+  object.workers_dev = !config.customDomain;
+  object.preview_urls = false;
   object.assets = {
     not_found_handling: "single-page-application",
     run_worker_first: ["/api/*", "/git/*"],
@@ -189,7 +189,7 @@ export function wranglerConfigObject(
   };
   object.observability = {
     enabled: true,
-    logs: { enabled: true, invocation_logs: true },
+    logs: { enabled: true, invocation_logs: false },
   };
   return object;
 }

@@ -5,8 +5,8 @@ import {
   desc,
   eq,
   inArray,
-  like,
   or,
+  sql,
   type SQL,
 } from "drizzle-orm";
 import { Hono, type Context } from "hono";
@@ -305,7 +305,10 @@ issueRoutes.get(
     if (query.q) {
       const pattern = likeContains(query.q);
       conditions.push(
-        or(like(issues.title, pattern), like(issues.description, pattern))!
+        or(
+          sql`${issues.title} LIKE ${pattern} ESCAPE '\\'`,
+          sql`${issues.description} LIKE ${pattern} ESCAPE '\\'`
+        )!
       );
     }
     if (query.label) {

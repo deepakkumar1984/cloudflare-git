@@ -12,7 +12,7 @@
     "dev:e2e": "tsx scripts/e2e-server.ts",
     "build": "vite build",
     "preview": "npm run build && tsx scripts/dev.ts preview",
-    "deploy": "npm run db:migrate && wrangler deploy",
+    "deploy": "tsx scripts/check-deploy.ts && npm run db:migrate && wrangler deploy",
     "types": "wrangler types",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src tests scripts",

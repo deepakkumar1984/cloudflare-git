@@ -9,8 +9,49 @@ export function configuredAppName(value: string | undefined): string {
 }
 
 /** Deployed Workers omit this var and run as production. Local dev sets `development`. */
-export function isProductionEnvironment(environment: string | undefined): boolean {
+export function isProductionEnvironment(
+  environment: string | undefined
+): boolean {
   return environment !== "development";
+}
+
+/**
+ * Production signup stays closed after the first account unless the operator
+ * sets ALLOW_PUBLIC_SIGNUP=true. Development stays open for local work.
+ * The first production account can still be created so a deploy is usable.
+ */
+export function publicSignupAllowed(
+  environment: string | undefined,
+  allowPublicSignup: string | undefined,
+  hasUsers: boolean
+): boolean {
+  if (!isProductionEnvironment(environment)) return true;
+  if (allowPublicSignup === "true") return true;
+  return !hasUsers;
+}
+
+/**
+ * Admin is only the first account, and only when that address is listed.
+ * Later signups never inherit admin from an unverified email.
+ */
+export function grantInitialAdmin(
+  isFirstAccount: boolean,
+  email: string,
+  adminEmails: ReadonlySet<string>
+): boolean {
+  return isFirstAccount && adminEmails.has(email.toLowerCase());
+}
+
+export function firstAccountMustMatchAdminList(
+  environment: string | undefined,
+  isFirstAccount: boolean,
+  adminEmails: ReadonlySet<string>
+): boolean {
+  return (
+    isProductionEnvironment(environment) &&
+    isFirstAccount &&
+    adminEmails.size > 0
+  );
 }
 
 export const ROLES = [
@@ -123,5 +164,7 @@ export const GIT_PROVIDER_LABELS: Record<GitProvider, string> = {
 
 export const IMPORT_PROXY_TTL_SECONDS = 30 * 60;
 export const IMPORT_PROXY_MAX_REQUESTS_PER_MINUTE = 600;
+/** Artifacts rejects pushes above 64 MiB. The proxies enforce the same cap. */
+export const GIT_HTTP_MAX_BODY_BYTES = 64 * 1024 * 1024;
 export const MAX_IMPORT_DEPTH = 10_000;
 export const MAX_PROVIDER_REPO_SEGMENTS = 20;

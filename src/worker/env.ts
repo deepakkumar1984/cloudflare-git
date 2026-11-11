@@ -15,6 +15,7 @@ declare global {
     ARTIFACTS_FAKE?: string;
     GITLAB_BASE_URL?: string;
     GIT_PROVIDERS_FAKE?: string;
+    ALLOW_PUBLIC_SIGNUP?: string;
   }
 }
 

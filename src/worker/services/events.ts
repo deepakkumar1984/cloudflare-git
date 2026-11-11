@@ -1,5 +1,61 @@
+import { sql, type SQL } from "drizzle-orm";
 import type { Database } from "@db/client";
 import { auditEvents, events } from "@db/schema";
+
+const CODE_METADATA_FIELDS: Record<string, readonly string[]> = {
+  push: ["ref", "before", "after", "repo", "unverifiedAuthor"],
+  "project.imported": ["externalRepo", "branch"],
+  "project.reimported": ["externalRepo", "branch"],
+  "project.import_failed": ["externalRepo", "error"],
+};
+
+/**
+ * Drops issue titles for everyone, and drops repository details from viewers
+ * who are below reporter.
+ */
+export function presentActivityMetadata(
+  action: string,
+  metadata: Record<string, unknown> | null | undefined,
+  canReadCode: boolean
+): Record<string, unknown> {
+  const rest = Object.fromEntries(
+    Object.entries(metadata ?? {}).filter(([key]) => key !== "title")
+  );
+  if (canReadCode) return rest;
+  const hidden = new Set(CODE_METADATA_FIELDS[action] ?? []);
+  if (hidden.size === 0) return rest;
+  return Object.fromEntries(
+    Object.entries(rest).filter(([key]) => !hidden.has(key))
+  );
+}
+
+/**
+ * Hides activity rows that point at a confidential issue the viewer cannot
+ * open. `codeProjectIds` are projects where the viewer is reporter or higher.
+ * An empty list hides every confidential issue event.
+ */
+export function readableActivityCondition(codeProjectIds: string[]): SQL {
+  if (codeProjectIds.length === 0) {
+    return sql`not (
+      ${events.targetType} = 'issue'
+      and ${events.targetId} in (
+        select id from issues where confidential = 1
+      )
+    )`;
+  }
+  const list = sql.join(
+    codeProjectIds.map((id) => sql`${id}`),
+    sql`, `
+  );
+  return sql`not (
+    ${events.targetType} = 'issue'
+    and ${events.targetId} in (
+      select id from issues
+      where confidential = 1
+      and project_id not in (${list})
+    )
+  )`;
+}
 
 export type EventAction =
   | "group.created"

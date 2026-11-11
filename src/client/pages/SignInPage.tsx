@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth";
-import { useAppName } from "@/lib/meta";
+import { useAppMeta } from "@/lib/meta";
 
 export function SignInPage() {
   const session = authClient.useSession();
@@ -19,7 +19,7 @@ export function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const appName = useAppName();
+  const { appName, signupOpen } = useAppMeta();
 
   const from =
     (location.state as { from?: { pathname?: string } } | null)?.from
@@ -127,15 +127,17 @@ export function SignInPage() {
         </Button>
       </form>
 
-      <p className="mt-7 text-center text-sm text-muted">
-        New to {appName}?{" "}
-        <Link
-          to="/sign-up"
-          className="font-medium text-accent underline-offset-4 hover:underline"
-        >
-          Create an account
-        </Link>
-      </p>
+      {signupOpen ? (
+        <p className="mt-7 text-center text-sm text-muted">
+          New to {appName}?{" "}
+          <Link
+            to="/sign-up"
+            className="font-medium text-accent underline-offset-4 hover:underline"
+          >
+            Create an account
+          </Link>
+        </p>
+      ) : null}
     </AuthLayout>
   );
 }

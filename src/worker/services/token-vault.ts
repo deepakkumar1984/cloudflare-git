@@ -7,12 +7,18 @@ const encoder = new TextEncoder();
 export function providerTokenSecret(env: {
   PROVIDER_TOKEN_KEY?: string;
   BETTER_AUTH_SECRET: string;
+  ENVIRONMENT?: string;
 }): string {
   if (env.PROVIDER_TOKEN_KEY) {
     if (env.PROVIDER_TOKEN_KEY.length < 32) {
       throw new Error("PROVIDER_TOKEN_KEY must be at least 32 characters");
     }
     return env.PROVIDER_TOKEN_KEY;
+  }
+  if (env.ENVIRONMENT !== "development") {
+    throw new Error(
+      "PROVIDER_TOKEN_KEY must be set in production. It encrypts GitHub and GitLab tokens separately from the auth secret."
+    );
   }
   return env.BETTER_AUTH_SECRET;
 }

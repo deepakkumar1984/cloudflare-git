@@ -16,6 +16,7 @@ import {
   canManageProjectMembers,
   canManageProjectSettings,
   canReadGit,
+  canViewConfidential,
   canWriteGit,
   maxRole,
 } from "@shared/permissions";
@@ -35,7 +36,12 @@ import {
   loadProject,
   projectSummary,
 } from "@worker/services/access";
-import { recordAudit, recordEvent } from "@worker/services/events";
+import {
+  presentActivityMetadata,
+  readableActivityCondition,
+  recordAudit,
+  recordEvent,
+} from "@worker/services/events";
 import {
   mintGitCredentials,
   revokeProjectTokens,
@@ -66,13 +72,13 @@ import { consumeRateLimit } from "@worker/lib/rate-limit";
 
 export const projectRoutes = new Hono<AppEnv>();
 
-function memberUser(row: typeof user.$inferSelect) {
+function memberUser(row: typeof user.$inferSelect, includeEmail: boolean) {
   return {
     id: row.id,
     name: row.name,
     username: row.username,
     displayUsername: row.displayUsername,
-    email: row.email,
+    email: includeEmail ? row.email : null,
     image: row.image,
   };
 }
@@ -171,9 +177,13 @@ projectRoutes.get(
   async (c) => {
     const project = c.get("project");
     const group = c.get("group");
+    const role = c.get("role");
     const query = readQuery(c, paginationSchema);
     const db = c.get("db");
-    const where = eq(events.projectId, project.id);
+    const where = and(
+      eq(events.projectId, project.id),
+      canViewConfidential(role) ? undefined : readableActivityCondition([])
+    );
     const [rows, [totalRow]] = await Promise.all([
       db
         .select({
@@ -194,13 +204,16 @@ projectRoutes.get(
       db.select({ value: count() }).from(events).where(where),
     ]);
 
+    const canReadCode = canReadGit(role);
     return c.json({
       activity: rows.map((row) => {
-        const metadata = row.metadata as Record<string, unknown>;
-        const { title: _title, ...safeMetadata } = metadata;
         return {
           ...row,
-          metadata: safeMetadata,
+          metadata: presentActivityMetadata(
+            row.action,
+            row.metadata as Record<string, unknown>,
+            canReadCode
+          ),
           projectSlug: project.slug,
           projectName: project.name,
           groupSlug: group.slug,
@@ -389,7 +402,8 @@ projectRoutes.post(
       }
     }
 
-    const rate = consumeRateLimit(
+    const rate = await consumeRateLimit(
+      c.get("db"),
       `clone-credentials:${session.user.id}:${project.id}`,
       10,
       60_000
@@ -454,7 +468,7 @@ projectRoutes.get(
     >();
     for (const { member, person } of groupRows) {
       merged.set(person.id, {
-        user: memberUser(person),
+        user: memberUser(person, canManageProjectMembers(role)),
         role: member.role,
         source: "group",
         createdAt: member.createdAt,
@@ -463,7 +477,7 @@ projectRoutes.get(
     for (const { member, person } of directRows) {
       const current = merged.get(person.id);
       merged.set(person.id, {
-        user: memberUser(person),
+        user: memberUser(person, canManageProjectMembers(role)),
         role: maxRole(current?.role, member.role) ?? member.role,
         source: current ? "both" : "project",
         createdAt: current?.createdAt ?? member.createdAt,
@@ -493,6 +507,18 @@ projectRoutes.post(
     assertProjectWritable(c);
     const db = c.get("db");
     const input = await readJson(c, memberAddSchema);
+    const lookup = await consumeRateLimit(
+      db,
+      `member-lookup:${session.user.id}`,
+      30,
+      60_000
+    );
+    if (!lookup.allowed) {
+      throw tooManyRequests(
+        "Too many member lookups. Wait a minute and try again.",
+        lookup.retryAfterSeconds
+      );
+    }
     const target = await findUserByIdentifier(db, input.identifier);
     if (!target) throw notFound("No user found with that username or email");
 
@@ -525,7 +551,7 @@ projectRoutes.post(
         {
           member: {
             role: member?.role ?? input.role,
-            user: memberUser(target),
+            user: memberUser(target, true),
           },
         },
         201

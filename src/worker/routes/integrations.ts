@@ -48,7 +48,8 @@ integrationRoutes.post("/integrations/:provider/connect", async (c) => {
   const session = assertAuthenticated(c);
   const provider = parseProvider(c.req.param("provider"));
   const input = await readJson(c, providerConnectSchema);
-  const rate = consumeRateLimit(
+  const rate = await consumeRateLimit(
+    c.get("db"),
     `provider-connect:${session.user.id}:${provider}`,
     10,
     60_000
@@ -91,7 +92,8 @@ integrationRoutes.get("/integrations/:provider/repositories", async (c) => {
   const session = assertAuthenticated(c);
   const provider = parseProvider(c.req.param("provider"));
   const query = readQuery(c, providerRepositoriesQuerySchema);
-  const rate = consumeRateLimit(
+  const rate = await consumeRateLimit(
+    c.get("db"),
     `provider-repositories:${session.user.id}:${provider}`,
     60,
     60_000
