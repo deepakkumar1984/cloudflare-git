@@ -1,34 +1,31 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { THEME_STORAGE_KEY } from "@shared/constants";
+import {
+  getTheme,
+  toggleTheme,
+  THEME_CHANGE_EVENT,
+  type Theme,
+} from "@/lib/theme";
 import { Button } from "./ui/button";
-
-type Theme = "light" | "dark";
-
-function currentTheme(): Theme {
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    setTheme(currentTheme());
+    setTheme(getTheme());
+    function onChange(event: Event) {
+      setTheme((event as CustomEvent<Theme>).detail);
+    }
+    window.addEventListener(THEME_CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(THEME_CHANGE_EVENT, onChange);
   }, []);
-
-  function toggle() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    document.documentElement.classList.toggle("dark", next === "dark");
-    localStorage.setItem(THEME_STORAGE_KEY, next);
-    setTheme(next);
-  }
 
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon-sm"
-      onClick={toggle}
+      onClick={() => setTheme(toggleTheme())}
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
       title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
     >

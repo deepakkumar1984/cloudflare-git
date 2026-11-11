@@ -187,12 +187,29 @@ test("create, review, and merge-request UI flow", async ({ browser }) => {
     ownerPage.getByText(`e2e-milestone-${stamp}`).first()
   ).toBeVisible();
 
+  // Releases: the dev seed creates a v0.1.0 tag; publish a release for it.
+  await ownerPage.goto(`/groups/${groupSlug}/${projectSlug}/releases?tab=tags`);
+  await expect(ownerPage.getByText("v0.1.0").first()).toBeVisible();
+  await ownerPage.getByRole("button", { name: "Create release" }).click();
+  await ownerPage.fill("#release-title", `e2e-release-${stamp}`);
+  await ownerPage.getByRole("button", { name: "Publish release" }).click();
+  await ownerPage.goto(`/groups/${groupSlug}/${projectSlug}/releases`);
+  await expect(
+    ownerPage.getByText(`e2e-release-${stamp}`).first()
+  ).toBeVisible();
+
   await ownerPage.goto(`/groups/${groupSlug}/${projectSlug}/boards`);
   await ownerPage.getByRole("button", { name: "Column", exact: true }).click();
   await ownerPage.fill("#column-name", "E2E Column");
   await ownerPage.selectOption("#column-label", { label: labelName });
   await ownerPage.getByRole("button", { name: "Add column" }).click();
   await expect(ownerPage.getByText("E2E Column").first()).toBeVisible();
+
+  // The reviewer has a review-request to-do.
+  await reviewerPage.goto("/todos");
+  await expect(
+    reviewerPage.getByText(/requested your review/).first()
+  ).toBeVisible();
 
   await ownerContext.close();
   await reviewerContext.close();

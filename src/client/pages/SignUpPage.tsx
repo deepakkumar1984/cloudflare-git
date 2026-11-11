@@ -40,7 +40,7 @@ export function SignUpPage() {
   if (!signupOpen) {
     return (
       <AuthLayout
-        title="Sign up is closed."
+        title="Sign up is closed"
         subtitle="This server is not accepting new accounts."
       >
         <p className="text-sm text-muted">
@@ -114,7 +114,7 @@ export function SignUpPage() {
 
   return (
     <AuthLayout
-      title="Create your account."
+      title="Create your account"
       subtitle="Your personal group is created automatically. You can add shared groups and projects right after."
     >
       <form onSubmit={submit} className="space-y-4">

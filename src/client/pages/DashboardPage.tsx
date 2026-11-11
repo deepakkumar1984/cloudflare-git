@@ -6,6 +6,8 @@ import {
   GitPullRequest,
   MessageSquare,
   Plus,
+  Tag,
+  UserRound,
   Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -14,14 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDashboard, useMe } from "@/lib/queries";
 import type { DashboardActivity } from "@/lib/types";
-import { cn, relativeTime } from "@/lib/utils";
-
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
+import { relativeTime } from "@/lib/utils";
 
 function activityMeta(activity: DashboardActivity): {
   icon: typeof CircleDot;
@@ -81,6 +76,19 @@ function activityMeta(activity: DashboardActivity): {
             ? `${projectBase}/merge_requests/${activity.targetIid}`
             : null,
       };
+    case "release.created":
+    case "release.updated":
+    case "release.deleted":
+      return {
+        icon: Tag,
+        label:
+          activity.action === "release.created"
+            ? "published a release"
+            : activity.action === "release.updated"
+              ? "updated a release"
+              : "deleted a release",
+        to: projectBase ? `${projectBase}/releases` : null,
+      };
     case "project.created":
       return {
         icon: FolderGit2,
@@ -124,10 +132,12 @@ export function DashboardPage() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold tracking-tight">
-          {greeting()}
-          {me.data?.user.name ? `, ${me.data.user.name.split(" ")[0]}` : ""}
-        </h1>
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
+          <p className="mt-0.5 text-[13px] text-muted">
+            Your work, reviews, and recent activity across projects
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {personal ? (
             <Button asChild variant="secondary">
@@ -148,25 +158,14 @@ export function DashboardPage() {
 
       <section className="grid grid-cols-2 divide-line overflow-hidden rounded-xl border border-line bg-surface shadow-card sm:grid-cols-4 sm:divide-x">
         {[
-          { label: "Assigned issues", value: assigned.length, tone: "accent" },
-          { label: "Review requests", value: reviews.length, tone: "blue" },
-          {
-            label: "Recent projects",
-            value: recentProjects.length,
-            tone: "green",
-          },
-          { label: "Groups", value: groups.length, tone: "neutral" },
+          { label: "Assigned issues", value: assigned.length },
+          { label: "Review requests", value: reviews.length },
+          { label: "Recent projects", value: recentProjects.length },
+          { label: "Groups", value: groups.length },
         ].map((stat) => (
           <div key={stat.label} className="px-5 py-4 sm:py-5">
             <p className="mono-label">{stat.label}</p>
-            <p
-              className={cn(
-                "mt-2 font-display text-3xl tabular-nums tracking-[-0.04em]",
-                stat.tone === "accent" && "text-accent",
-                stat.tone === "blue" && "text-blue",
-                stat.tone === "green" && "text-green"
-              )}
-            >
+            <p className="mt-2 font-display text-3xl tabular-nums tracking-[-0.02em] text-ink">
               {stat.value}
             </p>
           </div>
@@ -178,7 +177,7 @@ export function DashboardPage() {
           <section>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold tracking-tight">My work</h2>
-              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
+              <span className="font-mono text-[11px] text-faint">
                 {assigned.length + reviews.length} open
               </span>
             </div>
@@ -285,7 +284,7 @@ export function DashboardPage() {
                   <Link
                     key={`${project.groupSlug}/${project.slug}`}
                     to={`/groups/${project.groupSlug}/${project.slug}`}
-                    className="group rounded-xl border border-line bg-surface p-4 shadow-card transition-[border-color,transform] hover:-translate-y-0.5 hover:border-line-strong"
+                    className="group rounded-xl border border-line bg-surface p-4 shadow-card transition-colors hover:border-line-strong"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <span className="flex size-9 items-center justify-center rounded-lg border border-line bg-canvas text-muted">
@@ -314,9 +313,8 @@ export function DashboardPage() {
 
         <aside className="space-y-6">
           <Card>
-            <CardHeader className="flex items-center justify-between">
+            <CardHeader>
               <CardTitle>Activity</CardTitle>
-              <Badge tone="outline">Live</Badge>
             </CardHeader>
             <CardContent className="p-0">
               {activity.length === 0 ? (
@@ -387,9 +385,9 @@ export function DashboardPage() {
                 >
                   <div className="flex size-8 items-center justify-center rounded-lg border border-line bg-surface">
                     {group.personal ? (
-                      <Users className="size-3.5 text-faint" />
+                      <UserRound className="size-3.5 text-faint" />
                     ) : (
-                      <FolderGit2 className="size-3.5 text-faint" />
+                      <Users className="size-3.5 text-faint" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">

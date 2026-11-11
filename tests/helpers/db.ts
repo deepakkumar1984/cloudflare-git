@@ -27,6 +27,8 @@ const DELETE_ORDER = [
   "issues",
   "milestones",
   "labels",
+  "releases",
+  "todos",
   "import_proxy_sessions",
   "project_imports",
   "provider_connections",

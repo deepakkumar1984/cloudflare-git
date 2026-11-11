@@ -9,7 +9,6 @@ import {
   GitPullRequest,
   Loader2,
   Lock,
-  Sparkles,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -224,7 +223,10 @@ export function ProjectOverviewPage() {
             <CardContent>
               {empty ? (
                 <div className="rounded-lg border border-dashed border-line bg-canvas/40 px-5 py-8 text-center">
-                  <Sparkles className="mx-auto size-5 text-accent" />
+                  <GitBranch
+                    className="mx-auto size-5 text-faint"
+                    strokeWidth={1.5}
+                  />
                   <h3 className="mt-3 text-sm font-semibold">
                     This repository is empty
                   </h3>
@@ -289,9 +291,8 @@ export function ProjectOverviewPage() {
 
       <aside className="space-y-5">
         <Card className="overflow-hidden">
-          <CardHeader className="flex items-center justify-between">
+          <CardHeader>
             <CardTitle>Activity</CardTitle>
-            <Badge tone="outline">Recent</Badge>
           </CardHeader>
           <CardContent className="p-0">
             <ActivityFeed

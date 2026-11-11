@@ -109,7 +109,7 @@ export function ProjectMembersPage() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
-        <div className="grid grid-cols-[minmax(0,1fr)_130px_150px] gap-3 border-b border-line bg-canvas/50 px-5 py-2.5 font-mono text-[10px] uppercase tracking-[0.1em] text-faint sm:grid-cols-[minmax(0,1fr)_150px_170px]">
+        <div className="grid grid-cols-[minmax(0,1fr)_130px_150px] gap-3 border-b border-line bg-canvas/50 px-5 py-2.5 font-mono text-[11px] text-faint sm:grid-cols-[minmax(0,1fr)_150px_170px]">
           <span>Member</span>
           <span>Effective role</span>
           <span className="text-right">Source</span>

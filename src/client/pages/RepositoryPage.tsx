@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronRight,
+  Database,
   File,
   FileArchive,
   FileCode2,
@@ -10,7 +11,6 @@ import {
   GitBranch,
   Image as ImageIcon,
   Loader2,
-  Sparkles,
 } from "lucide-react";
 import {
   Link,
@@ -19,6 +19,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 import { Markdown } from "@/components/Markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,31 +129,35 @@ export function RepositoryPage() {
   const repo = summary.data;
   if (!repo || repo.isEmpty) {
     return (
-      <div className="rounded-xl border border-dashed border-line px-6 py-16 text-center">
-        <GitBranch className="mx-auto size-7 text-faint" />
-        <h2 className="mt-4 text-sm font-semibold">This repository is empty</h2>
-        <p className="mx-auto mt-1 max-w-md text-[13px] leading-6 text-muted">
-          Push a first commit to{" "}
-          <code className="font-mono">{repo?.defaultBranch || "main"}</code>{" "}
-          using a write credential from the Clone dialog.
-        </p>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-          {import.meta.env.DEV ? (
+      <EmptyState
+        icon={GitBranch}
+        title="This repository is empty"
+        description={
+          <>
+            Push a first commit to{" "}
+            <code className="font-mono text-ink">
+              {repo?.defaultBranch || "main"}
+            </code>{" "}
+            using a write credential from the Clone dialog.
+          </>
+        }
+        action={
+          import.meta.env.DEV ? (
             <Button
-              variant="ghost"
+              variant="secondary"
               onClick={() => seed.mutate()}
               disabled={seed.isPending}
             >
               {seed.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                <Sparkles className="size-4" />
+                <Database className="size-4" />
               )}
               Load demo files
             </Button>
-          ) : null}
-        </div>
-      </div>
+          ) : null
+        }
+      />
     );
   }
 
@@ -182,13 +187,22 @@ export function RepositoryPage() {
               </span>
             </div>
 
-            <Button asChild variant="ghost" size="sm">
-              <Link
-                to={`/groups/${groupSlug}/${projectSlug}/repository/commits?ref=${encodeURIComponent(branch)}`}
-              >
-                Commits
-              </Link>
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button asChild variant="ghost" size="sm">
+                <Link
+                  to={`/groups/${groupSlug}/${projectSlug}/releases?tab=tags`}
+                >
+                  Tags
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link
+                  to={`/groups/${groupSlug}/${projectSlug}/repository/commits?ref=${encodeURIComponent(branch)}`}
+                >
+                  Commits
+                </Link>
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-1 border-b border-line bg-canvas/40 px-4 py-2 font-mono text-[11px] text-muted">

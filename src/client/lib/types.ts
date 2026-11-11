@@ -305,6 +305,82 @@ export interface RepositoryReadme {
   readme: { path: string; content: string } | null;
 }
 
+export interface RepositoryTag {
+  name: string;
+  sha: string;
+  updatedAt: string;
+  commit: {
+    hash: string;
+    message: string;
+    author: { name: string; email: string };
+    committedAt: string;
+  } | null;
+}
+
+export interface RepositoryTagsResponse {
+  tags: RepositoryTag[];
+}
+
+export interface ReleaseTagInfo {
+  name: string;
+  sha: string | null;
+  committedAt: string | null;
+  exists: boolean;
+}
+
+export interface Release {
+  id: string;
+  projectId: string;
+  tagName: string;
+  title: string;
+  description: string;
+  authorId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  author: MemberUser | null;
+  tag: ReleaseTagInfo;
+}
+
+export interface ReleaseListResponse {
+  releases: Release[];
+  canManage: boolean;
+}
+
+export interface ReleaseResponse {
+  release: Release;
+}
+
+export interface Todo {
+  id: string;
+  userId: string;
+  projectId: string;
+  actorId: string | null;
+  action: "assigned" | "review_requested" | "mentioned";
+  targetType: "issue" | "merge_request";
+  targetId: string;
+  targetIid: number;
+  noteId: string | null;
+  state: "pending" | "done";
+  createdAt: string;
+  updatedAt: string;
+  actor: {
+    id: string;
+    name: string;
+    username: string | null;
+    image: string | null;
+  } | null;
+  project: { slug: string; name: string; groupSlug: string };
+}
+
+export interface TodosResponse {
+  todos: Todo[];
+  pendingCount: number;
+}
+
+export interface TodoCountResponse {
+  count: number;
+}
+
 export interface IssueLabel {
   id: string;
   title: string;

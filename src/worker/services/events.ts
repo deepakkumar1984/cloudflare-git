@@ -86,6 +86,9 @@ export type EventAction =
   | "mr.approved"
   | "mr.comment"
   | "mr.review_requested"
+  | "release.created"
+  | "release.updated"
+  | "release.deleted"
   | "push";
 
 export async function recordEvent(

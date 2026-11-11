@@ -29,8 +29,12 @@ import type {
   RepositoryCommitList,
   RepositoryReadme,
   RepositorySummary,
+  RepositoryTagsResponse,
   RepositoryTree,
+  ReleaseListResponse,
   SearchResponse,
+  TodoCountResponse,
+  TodosResponse,
 } from "./types";
 
 export function useMe() {
@@ -219,6 +223,47 @@ export function useRepositoryReadme(
         `/groups/${groupSlug}/projects/${projectSlug}/repository/readme`
       ),
     enabled: Boolean(groupSlug && projectSlug && enabled),
+  });
+}
+
+export function useRepositoryTags(
+  groupSlug: string,
+  projectSlug: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ["repository", groupSlug, projectSlug, "tags"],
+    queryFn: () =>
+      api.get<RepositoryTagsResponse>(
+        `/groups/${groupSlug}/projects/${projectSlug}/repository/tags`
+      ),
+    enabled: Boolean(groupSlug && projectSlug && enabled),
+  });
+}
+
+export function useReleases(groupSlug: string, projectSlug: string) {
+  return useQuery({
+    queryKey: ["releases", groupSlug, projectSlug],
+    queryFn: () =>
+      api.get<ReleaseListResponse>(
+        `/groups/${groupSlug}/projects/${projectSlug}/releases`
+      ),
+    enabled: Boolean(groupSlug && projectSlug),
+  });
+}
+
+export function useTodos(state: "pending" | "done" | "all" = "pending") {
+  return useQuery({
+    queryKey: ["todos", state],
+    queryFn: () => api.get<TodosResponse>(`/todos${qs({ state })}`),
+  });
+}
+
+export function useTodoCount() {
+  return useQuery({
+    queryKey: ["todos", "count"],
+    queryFn: () => api.get<TodoCountResponse>("/todos/count"),
+    refetchInterval: 30_000,
   });
 }
 

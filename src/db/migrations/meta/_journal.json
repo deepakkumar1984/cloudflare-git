@@ -15,6 +15,20 @@
       "when": 1794356946876,
       "tag": "0001_rate_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794383545540,
+      "tag": "0002_greedy_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1794387278694,
+      "tag": "0003_purple_thunderball",
+      "breakpoints": true
     }
   ]
 }

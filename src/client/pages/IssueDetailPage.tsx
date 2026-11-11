@@ -267,9 +267,7 @@ export function IssueDetailPage() {
 
         <div className="rounded-xl border border-line bg-surface shadow-card">
           <div className="border-b border-line px-5 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
-              Description
-            </p>
+            <p className="mono-label">Description</p>
           </div>
           <div className="px-5 py-5">
             {issue.description ? (
@@ -409,9 +407,7 @@ export function IssueDetailPage() {
               className="mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-card"
             >
               <div className="flex items-center justify-between border-b border-line px-4 py-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
-                  Add a comment
-                </span>
+                <span className="mono-label">Add a comment</span>
                 <div className="flex rounded-md border border-line bg-canvas p-0.5">
                   <button
                     type="button"

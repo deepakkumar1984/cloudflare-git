@@ -179,7 +179,7 @@ export function MergeRequestsPage() {
                       <Badge tone="accent">Heuristic merge</Badge>
                     ) : null}
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-faint">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-faint">
                     <span className="font-mono">!{mr.iid}</span>
                     <span>·</span>
                     <span className="font-mono">

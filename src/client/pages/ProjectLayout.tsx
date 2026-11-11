@@ -8,6 +8,7 @@ import {
   Loader2,
   Lock,
   Settings,
+  Tag,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -183,6 +184,10 @@ export function ProjectLayout() {
             <span className="font-mono text-[10px] text-faint">
               {data.project.openMergeRequests}
             </span>
+          </NavLink>
+          <NavLink to="releases" className={tabClass}>
+            <Tag className="size-3.5" />
+            Releases
           </NavLink>
           <NavLink to="members" className={tabClass}>
             <Users className="size-3.5" />

@@ -348,6 +348,7 @@ export class FakeGitStorage implements GitStorage {
       files: Record<string, string>;
       author?: { name: string; email: string };
       timestamp?: number;
+      tag?: string;
     }
   ): ArtifactsCommit {
     const repo = this.get(name);
@@ -382,6 +383,7 @@ export class FakeGitStorage implements GitStorage {
     };
     repo.commits.set(hash, commit);
     repo.refs.set(ref, hash);
+    if (options.tag) repo.refs.set(`refs/tags/${options.tag}`, hash);
     repo.infoValue = {
       ...repo.infoValue,
       defaultBranch: repo.refs.has(`refs/heads/${repo.infoValue.defaultBranch}`)

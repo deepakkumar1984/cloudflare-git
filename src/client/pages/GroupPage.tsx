@@ -118,7 +118,7 @@ export function GroupPage() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold tracking-tight">Projects</h2>
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
+          <span className="font-mono text-[11px] text-faint">
             {projects.length} total
           </span>
         </div>
@@ -146,7 +146,7 @@ export function GroupPage() {
               <Link
                 key={project.id}
                 to={`/groups/${group.slug}/${project.slug}`}
-                className="group flex flex-col rounded-xl border border-line bg-surface p-5 shadow-card transition-[border-color,transform] hover:-translate-y-0.5 hover:border-line-strong"
+                className="group flex flex-col rounded-xl border border-line bg-surface p-5 shadow-card transition-colors hover:border-line-strong"
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className="flex size-10 items-center justify-center rounded-xl border border-line bg-canvas text-muted">

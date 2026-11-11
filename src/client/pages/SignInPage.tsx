@@ -55,8 +55,8 @@ export function SignInPage() {
 
   return (
     <AuthLayout
-      title="Welcome back."
-      subtitle="Sign in with your email address or username to pick up where you left off."
+      title="Sign in"
+      subtitle="Use your email address or username to pick up where you left off."
     >
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-1.5">

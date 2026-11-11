@@ -257,7 +257,7 @@ export function IssuesPage() {
                       <Badge tone="red">Confidential</Badge>
                     ) : null}
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-faint">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-faint">
                     <span className="font-mono">#{issue.iid}</span>
                     <span>
                       opened {relativeTime(issue.createdAt)} by{" "}
@@ -278,7 +278,7 @@ export function IssuesPage() {
                       {issue.labels.map((item) => (
                         <span
                           key={item.id}
-                          className="rounded-full border px-2 py-0.5 text-[10px]"
+                          className="rounded-full border px-2 py-0.5 text-[11px]"
                           style={{
                             borderColor: `${item.color}55`,
                             backgroundColor: `${item.color}14`,
@@ -300,7 +300,7 @@ export function IssuesPage() {
                       className="size-6"
                     />
                   ))}
-                  <span className="w-16 text-right text-[10px] text-faint">
+                  <span className="w-24 shrink-0 whitespace-nowrap text-right text-[11px] text-faint">
                     {relativeTime(issue.updatedAt)}
                   </span>
                 </div>

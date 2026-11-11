@@ -47,6 +47,7 @@ import {
   loadProject,
 } from "@worker/services/access";
 import { recordEvent } from "@worker/services/events";
+import { createTodos, notifyMentions } from "@worker/services/todos";
 import { allocateIid } from "@worker/services/iid";
 import { assertAssignableUsers } from "@worker/services/members";
 import {
@@ -469,6 +470,15 @@ issueRoutes.post(
         ? { confidential: true }
         : { title: issue.title },
     });
+    await createTodos(db, {
+      userIds: assignees,
+      actorId: session.user.id,
+      projectId: project.id,
+      action: "assigned",
+      targetType: "issue",
+      targetId: issue.id,
+      targetIid: issue.iid,
+    });
 
     const row = await getIssueRow(c, issue.iid);
     const relations = await loadRelations(db, [issue.id]);
@@ -521,6 +531,14 @@ issueRoutes.patch(
       ? [...new Set(input.assigneeIds)]
       : null;
     const labelIds = input.labelIds ? [...new Set(input.labelIds)] : null;
+    const previousAssignees = assigneeIds
+      ? (
+          await db
+            .select({ userId: issueAssignees.userId })
+            .from(issueAssignees)
+            .where(eq(issueAssignees.issueId, row.issue.id))
+        ).map((row2) => row2.userId)
+      : [];
     await writeBatch(db, [
       db
         .update(issues)
@@ -583,6 +601,18 @@ issueRoutes.patch(
       targetIid: row.issue.iid,
       metadata: { fields: Object.keys(input) },
     });
+    if (assigneeIds) {
+      const previous = new Set(previousAssignees);
+      await createTodos(db, {
+        userIds: assigneeIds.filter((userId) => !previous.has(userId)),
+        actorId: session.user.id,
+        projectId: project.id,
+        action: "assigned",
+        targetType: "issue",
+        targetId: row.issue.id,
+        targetIid: row.issue.iid,
+      });
+    }
 
     const updated = await getIssueRow(c, iid);
     const relations = await loadRelations(db, [row.issue.id]);
@@ -816,6 +846,15 @@ issueRoutes.post(
       targetType: "issue",
       targetId: row.issue.id,
       targetIid: row.issue.iid,
+    });
+    await notifyMentions(db, {
+      body: input.body,
+      actorId: session.user.id,
+      project: c.get("project"),
+      targetType: "issue",
+      targetId: row.issue.id,
+      targetIid: row.issue.iid,
+      noteId: note.id,
     });
     return c.json(
       {

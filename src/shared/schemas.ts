@@ -193,6 +193,36 @@ export const milestoneUpdateSchema = z.object({
   state: z.enum(["active", "closed"]).optional(),
 });
 
+const tagNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(255)
+  .refine(
+    (value) =>
+      !value.startsWith("/") &&
+      !value.endsWith("/") &&
+      !value.startsWith(".") &&
+      !value.endsWith(".") &&
+      !value.endsWith(".lock") &&
+      !value.includes("..") &&
+      !value.includes("@{") &&
+      // oxlint-disable-next-line no-control-regex -- Git ref validation
+      !/[\u0000-\u001f\u007f\s~^:?*[\]\\]/.test(value),
+    "Invalid tag name"
+  );
+
+export const releaseCreateSchema = z.object({
+  tagName: tagNameSchema,
+  title: z.string().trim().min(1).max(200),
+  description: bodySchema,
+});
+
+export const releaseUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  description: bodySchema.optional(),
+});
+
 const idListSchema = z.array(idSchema).max(50).optional();
 // Better Auth user IDs are opaque text, not UUIDs.
 export const userIdSchema = z.string().trim().min(1).max(128);

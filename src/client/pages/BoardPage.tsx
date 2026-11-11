@@ -65,7 +65,7 @@ function Card({
             {issue.labels.slice(0, 3).map((label) => (
               <span
                 key={label.id}
-                className="rounded-full px-1.5 py-0.5 text-[9px]"
+                className="rounded-full px-1.5 py-0.5 text-[10px]"
                 style={{
                   backgroundColor: `${label.color}18`,
                   color: label.color,
@@ -86,7 +86,7 @@ function Card({
                 />
               ))}
             </div>
-            <span className="text-[9px] text-faint">
+            <span className="text-[10px] text-faint">
               #{issue.iid} · {relativeTime(issue.updatedAt)}
             </span>
           </div>

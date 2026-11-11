@@ -48,6 +48,7 @@ import {
   loadProject,
 } from "@worker/services/access";
 import { recordEvent } from "@worker/services/events";
+import { createTodos, notifyMentions } from "@worker/services/todos";
 import { allocateIid } from "@worker/services/iid";
 import { assertAssignableUsers } from "@worker/services/members";
 import { isAncestor } from "@worker/services/merge-detection";
@@ -523,6 +524,24 @@ mergeRequestRoutes.post(
       targetIid: mr.iid,
       metadata: { title: mr.title },
     });
+    await createTodos(db, {
+      userIds: assignees,
+      actorId: session.user.id,
+      projectId: project.id,
+      action: "assigned",
+      targetType: "merge_request",
+      targetId: mr.id,
+      targetIid: mr.iid,
+    });
+    await createTodos(db, {
+      userIds: reviewerIds,
+      actorId: session.user.id,
+      projectId: project.id,
+      action: "review_requested",
+      targetType: "merge_request",
+      targetId: mr.id,
+      targetIid: mr.iid,
+    });
 
     return c.json({ ...(await loadMrView(c, mr.iid)) }, 201);
   }
@@ -585,6 +604,22 @@ mergeRequestRoutes.patch(
     const reviewerIds = input.reviewerIds
       ? [...new Set(input.reviewerIds)]
       : null;
+    const previousAssignees = assigneeIds
+      ? (
+          await db
+            .select({ userId: mergeRequestAssignees.userId })
+            .from(mergeRequestAssignees)
+            .where(eq(mergeRequestAssignees.mergeRequestId, row.mr.id))
+        ).map((r) => r.userId)
+      : [];
+    const previousReviewers = reviewerIds
+      ? (
+          await db
+            .select({ userId: mergeRequestReviewers.userId })
+            .from(mergeRequestReviewers)
+            .where(eq(mergeRequestReviewers.mergeRequestId, row.mr.id))
+        ).map((r) => r.userId)
+      : [];
     await writeBatch(db, [
       db
         .update(mergeRequests)
@@ -667,6 +702,30 @@ mergeRequestRoutes.patch(
       targetIid: row.mr.iid,
       metadata: { fields: Object.keys(input) },
     });
+    if (assigneeIds) {
+      const previous = new Set(previousAssignees);
+      await createTodos(db, {
+        userIds: assigneeIds.filter((userId) => !previous.has(userId)),
+        actorId: session.user.id,
+        projectId: project.id,
+        action: "assigned",
+        targetType: "merge_request",
+        targetId: row.mr.id,
+        targetIid: row.mr.iid,
+      });
+    }
+    if (reviewerIds) {
+      const previous = new Set(previousReviewers);
+      await createTodos(db, {
+        userIds: reviewerIds.filter((userId) => !previous.has(userId)),
+        actorId: session.user.id,
+        projectId: project.id,
+        action: "review_requested",
+        targetType: "merge_request",
+        targetId: row.mr.id,
+        targetIid: row.mr.iid,
+      });
+    }
 
     return c.json(await loadMrView(c, iid));
   }
@@ -1078,6 +1137,15 @@ mergeRequestRoutes.post(
       targetType: "merge_request",
       targetId: row.mr.id,
       targetIid: row.mr.iid,
+    });
+    await notifyMentions(db, {
+      body: input.body,
+      actorId: session.user.id,
+      project: c.get("project"),
+      targetType: "merge_request",
+      targetId: row.mr.id,
+      targetIid: row.mr.iid,
+      noteId: note.id,
     });
     return c.json(
       {

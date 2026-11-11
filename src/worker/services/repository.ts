@@ -460,6 +460,100 @@ export async function getBranches(db: Database, project: Project) {
     });
 }
 
+export async function getTags(
+  db: Database,
+  storage: GitStorage,
+  project: Project
+) {
+  const refs = await db
+    .select()
+    .from(gitRefs)
+    .where(
+      and(
+        eq(gitRefs.projectId, project.id),
+        eq(gitRefs.refType, "tag"),
+        isNull(gitRefs.deletedAt)
+      )
+    );
+  if (refs.length === 0) return [];
+  const commits = await db
+    .select()
+    .from(gitCommits)
+    .where(
+      and(
+        eq(gitCommits.projectId, project.id),
+        inArray(
+          gitCommits.sha,
+          refs.map((ref) => ref.sha)
+        )
+      )
+    );
+  interface TagCommit {
+    sha: string;
+    message: string;
+    authorName: string;
+    authorEmail: string;
+    committedAt: Date;
+  }
+  const bySha = new Map<string, TagCommit>(
+    commits.map((commit) => [
+      commit.sha,
+      {
+        sha: commit.sha,
+        message: commit.message,
+        authorName: commit.authorName,
+        authorEmail: commit.authorEmail,
+        committedAt: commit.committedAt,
+      },
+    ])
+  );
+
+  const tags = [];
+  for (const ref of refs) {
+    const name = ref.refName.replace(/^refs\/tags\//, "");
+    let commit = bySha.get(ref.sha) ?? null;
+    // Annotated tags point at a tag object, not a commit. Peel lazily by
+    // asking storage for the tag's log, which resolves to the tagged commit.
+    if (!commit) {
+      const [peeled] = await storage.log(project.artifactsRepoName, {
+        ref: name,
+        limit: 1,
+      });
+      if (peeled) {
+        const input = toCommitInput(peeled);
+        await upsertCommits(db, project.id, [input]);
+        commit = {
+          sha: input.hash,
+          message: input.message,
+          authorName: input.author.name,
+          authorEmail: input.author.email,
+          committedAt: input.committedAt,
+        };
+      }
+    }
+    tags.push({
+      name,
+      sha: commit ? commit.sha : ref.sha,
+      updatedAt: ref.updatedAt.toISOString(),
+      commit: commit
+        ? {
+            hash: commit.sha,
+            message: commit.message,
+            author: { name: commit.authorName, email: commit.authorEmail },
+            committedAt: commit.committedAt.toISOString(),
+          }
+        : null,
+    });
+  }
+
+  return tags.sort((a, b) => {
+    const aTime = a.commit ? Date.parse(a.commit.committedAt) : 0;
+    const bTime = b.commit ? Date.parse(b.commit.committedAt) : 0;
+    if (aTime !== bTime) return bTime - aTime;
+    return b.name.localeCompare(a.name);
+  });
+}
+
 export async function getReadme(
   storage: GitStorage,
   project: Project

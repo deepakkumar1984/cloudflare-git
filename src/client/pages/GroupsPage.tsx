@@ -1,6 +1,7 @@
 import { FolderGit2, Lock, Plus, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,32 +56,32 @@ export function GroupsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-line px-6 py-16 text-center">
-          <Users className="mx-auto size-7 text-faint" />
-          <h2 className="mt-4 text-sm font-semibold">
-            {query ? "No matching groups" : "No groups yet"}
-          </h2>
-          <p className="mx-auto mt-1 max-w-sm text-[13px] leading-6 text-muted">
-            {query
+        <EmptyState
+          icon={Users}
+          title={query ? "No matching groups" : "No groups yet"}
+          description={
+            query
               ? "Try a shorter name or slug."
-              : "Create a group for a team, a client, or an area of work. Your personal group is already available for solo projects."}
-          </p>
-          {!query ? (
-            <Button asChild variant="primary" className="mt-5">
-              <Link to="/groups/new">
-                <Plus className="size-4" />
-                Create a group
-              </Link>
-            </Button>
-          ) : null}
-        </div>
+              : "Create a group for a team, a client, or an area of work. Your personal group is already available for solo projects."
+          }
+          action={
+            !query ? (
+              <Button asChild variant="primary">
+                <Link to="/groups/new">
+                  <Plus className="size-4" />
+                  Create a group
+                </Link>
+              </Button>
+            ) : null
+          }
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((group) => (
             <Link
               key={group.id}
               to={`/groups/${group.slug}`}
-              className="group flex flex-col rounded-xl border border-line bg-surface p-5 shadow-card transition-[border-color,transform] hover:-translate-y-0.5 hover:border-line-strong"
+              className="group flex flex-col rounded-xl border border-line bg-surface p-5 shadow-card transition-colors hover:border-line-strong"
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="flex size-10 items-center justify-center rounded-xl border border-line bg-canvas">

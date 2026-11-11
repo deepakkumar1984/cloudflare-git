@@ -526,9 +526,7 @@ export function MergeRequestDetailPage() {
             <>
               <div className="rounded-xl border border-line bg-surface shadow-card">
                 <div className="border-b border-line px-5 py-3">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
-                    Description
-                  </p>
+                  <p className="mono-label">Description</p>
                 </div>
                 <div className="px-5 py-5">
                   {mr.description ? (
@@ -629,9 +627,7 @@ export function MergeRequestDetailPage() {
                     className="mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-card"
                   >
                     <div className="flex items-center justify-between border-b border-line px-4 py-2">
-                      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
-                        Review discussion
-                      </span>
+                      <span className="mono-label">Review discussion</span>
                       <div className="flex rounded-md border border-line bg-canvas p-0.5">
                         <button
                           type="button"
@@ -793,7 +789,7 @@ export function MergeRequestDetailPage() {
                 <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(200px,0.55fr)_minmax(0,1.45fr)]">
                   <div className="h-fit overflow-hidden rounded-xl border border-line bg-surface shadow-card lg:sticky lg:top-6">
                     <div className="border-b border-line px-3 py-2">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
+                      <p className="mono-label">
                         {files.length} changed file
                         {files.length === 1 ? "" : "s"}
                       </p>
@@ -849,7 +845,7 @@ export function MergeRequestDetailPage() {
                           <p className="break-all font-mono text-[12px] font-medium">
                             {selectedFile.path}
                           </p>
-                          <p className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-faint">
+                          <p className="mt-0.5 font-mono text-[11px] text-faint">
                             {selectedFile.status}
                           </p>
                         </div>

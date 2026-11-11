@@ -4,6 +4,7 @@ import {
   GitBranch,
   GitPullRequest,
   MessageSquare,
+  Tag,
   Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -73,6 +74,19 @@ function activityMeta(activity: DashboardActivity): {
           projectBase && activity.targetIid
             ? `${projectBase}/merge_requests/${activity.targetIid}`
             : null,
+      };
+    case "release.created":
+    case "release.updated":
+    case "release.deleted":
+      return {
+        icon: Tag,
+        label:
+          activity.action === "release.created"
+            ? "published a release"
+            : activity.action === "release.updated"
+              ? "updated a release"
+              : "deleted a release",
+        to: projectBase ? `${projectBase}/releases` : null,
       };
     case "project.created":
     case "project.imported":

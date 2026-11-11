@@ -434,6 +434,71 @@ export const milestones = sqliteTable(
   ]
 );
 
+export const releases = sqliteTable(
+  "releases",
+  {
+    id: id(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    tagName: text("tag_name").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    authorId: text("author_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: now(),
+    updatedAt: updated(),
+  },
+  (table) => [
+    uniqueIndex("releases_project_tag_uq").on(table.projectId, table.tagName),
+    index("releases_project_created_idx").on(table.projectId, table.createdAt),
+  ]
+);
+
+export const todoActionValues = [
+  "assigned",
+  "review_requested",
+  "mentioned",
+] as const;
+export const todoStateValues = ["pending", "done"] as const;
+export const todoTargetValues = ["issue", "merge_request"] as const;
+
+export const todos = sqliteTable(
+  "todos",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    actorId: text("actor_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    action: text("action", { enum: todoActionValues }).notNull(),
+    targetType: text("target_type", { enum: todoTargetValues }).notNull(),
+    targetId: text("target_id").notNull(),
+    targetIid: integer("target_iid").notNull(),
+    noteId: text("note_id"),
+    state: text("state", { enum: todoStateValues })
+      .notNull()
+      .default("pending"),
+    createdAt: now(),
+    updatedAt: updated(),
+  },
+  (table) => [
+    index("todos_user_state_idx").on(table.userId, table.state),
+    index("todos_user_target_idx").on(
+      table.userId,
+      table.targetType,
+      table.targetId,
+      table.action
+    ),
+  ]
+);
+
 export const issues = sqliteTable(
   "issues",
   {
@@ -872,6 +937,8 @@ export type Project = typeof projects.$inferSelect;
 export type Issue = typeof issues.$inferSelect;
 export type MergeRequest = typeof mergeRequests.$inferSelect;
 export type Note = typeof notes.$inferSelect;
+export type Release = typeof releases.$inferSelect;
+export type Todo = typeof todos.$inferSelect;
 export type GitRef = typeof gitRefs.$inferSelect;
 export type GitCommit = typeof gitCommits.$inferSelect;
 export type ProviderConnection = typeof providerConnections.$inferSelect;

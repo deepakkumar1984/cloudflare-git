@@ -10,8 +10,10 @@ import { meRoutes } from "./me";
 import { mergeRequestRoutes } from "./merge-requests";
 import { projectImportRoutes } from "./project-imports";
 import { projectRoutes } from "./projects";
+import { releaseRoutes } from "./releases";
 import { repositoryRoutes } from "./repository";
 import { searchRoutes } from "./search";
+import { todoRoutes } from "./todos";
 
 const routeModules = [
   meRoutes,
@@ -25,7 +27,9 @@ const routeModules = [
   boardRoutes,
   labelRoutes,
   milestoneRoutes,
+  releaseRoutes,
   searchRoutes,
+  todoRoutes,
 ];
 
 export function mountApiRoutes(app: Hono<AppEnv>): void {

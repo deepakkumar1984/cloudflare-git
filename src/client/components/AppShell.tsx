@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Bell,
   ChevronsUpDown,
   LayoutDashboard,
   LogOut,
@@ -11,14 +12,16 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authClient } from "@/lib/auth";
 import { useAppName } from "@/lib/meta";
-import { useMe } from "@/lib/queries";
+import { useMe, useTodoCount } from "@/lib/queries";
 import type { GroupSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { CommandPalette } from "./CommandPalette";
 import { Avatar } from "./ui/avatar";
+import { Kbd } from "./ui/kbd";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +36,26 @@ function navClass({ isActive }: { isActive: boolean }) {
   return cn(
     "group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-muted transition-colors hover:bg-canvas hover:text-ink",
     isActive && "bg-canvas text-ink"
+  );
+}
+
+function TodoBell() {
+  const { data } = useTodoCount();
+  const count = data?.count ?? 0;
+  return (
+    <NavLink
+      to="/todos"
+      aria-label={count > 0 ? `To do, ${count} pending` : "To do"}
+      title="To do"
+      className="relative flex size-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-canvas hover:text-ink"
+    >
+      <Bell className="size-4" />
+      {count > 0 ? (
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-mono text-[9px] font-medium text-white dark:text-[#241608]">
+          {count > 9 ? "9+" : count}
+        </span>
+      ) : null}
+    </NavLink>
   );
 }
 
@@ -68,7 +91,13 @@ function GroupLink({
   );
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({
+  onNavigate,
+  onOpenPalette,
+}: {
+  onNavigate?: () => void;
+  onOpenPalette?: () => void;
+}) {
   const appName = useAppName();
   const { data, isLoading } = useMe();
   const navigate = useNavigate();
@@ -98,6 +127,21 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </NavLink>
       </div>
 
+      <div className="px-3 pb-1">
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            onOpenPalette?.();
+          }}
+          className="flex w-full items-center gap-2.5 rounded-md border border-line bg-canvas px-2.5 py-2 text-[13px] text-muted transition-colors hover:border-line-strong hover:text-ink"
+        >
+          <Search className="size-4 shrink-0 text-faint" />
+          <span className="flex-1 text-left">Search or jump to…</span>
+          <Kbd>⌘K</Kbd>
+        </button>
+      </div>
+
       <div className="px-3">
         <NavLink to="/" end className={navClass} onClick={onNavigate}>
           <LayoutDashboard className="size-4" />
@@ -110,9 +154,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <NavLink to="/search" className={navClass} onClick={onNavigate}>
           <Search className="size-4" />
           Search
-          <span className="ml-auto rounded border border-line px-1.5 py-0.5 font-mono text-[10px] text-faint">
-            /
-          </span>
+          <Kbd className="ml-auto">/</Kbd>
         </NavLink>
       </div>
 
@@ -148,6 +190,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="border-t border-line p-3">
         <div className="flex items-center gap-1 px-1 pb-2">
+          <TodoBell />
           <ThemeToggle />
           <NavLink
             to="/settings"
@@ -210,15 +253,48 @@ function isProjectRoute(pathname: string) {
 export function AppShell() {
   const appName = useAppName();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const closeMobile = useCallback(() => setMobileOpen(false), []);
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
   const location = useLocation();
   const projectRoute = isProjectRoute(location.pathname);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const editable =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((value) => !value);
+        return;
+      }
+      if (
+        event.key === "/" &&
+        !editable &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="flex h-dvh min-h-0 overflow-hidden">
       <aside className="hidden h-full w-[248px] shrink-0 border-r border-line lg:block">
-        <SidebarContent />
+        <SidebarContent onOpenPalette={openPalette} />
       </aside>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-line bg-canvas px-3 lg:hidden">
@@ -235,7 +311,18 @@ export function AppShell() {
               {appName}
             </span>
           </NavLink>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <TodoBell />
+            <button
+              type="button"
+              onClick={openPalette}
+              className="rounded-md p-2 text-muted transition-colors hover:bg-surface hover:text-ink"
+              aria-label="Search or jump to"
+            >
+              <Search className="size-5" />
+            </button>
+            <ThemeToggle />
+          </div>
         </header>
 
         {mobileOpen ? (
@@ -253,7 +340,10 @@ export function AppShell() {
               >
                 <X className="size-4" />
               </button>
-              <SidebarContent onNavigate={closeMobile} />
+              <SidebarContent
+                onNavigate={closeMobile}
+                onOpenPalette={openPalette}
+              />
             </div>
           </div>
         ) : null}

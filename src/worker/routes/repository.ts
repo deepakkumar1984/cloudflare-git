@@ -19,6 +19,7 @@ import {
   getCommits,
   getRawFile,
   getReadme,
+  getTags,
   getTree,
   refreshRepositoryRefs,
   toCommitInput,
@@ -81,6 +82,20 @@ repositoryRoutes.get(
     }
     const branches = await getBranches(c.get("db"), project);
     return c.json({ branches, defaultBranch: project.defaultBranch });
+  }
+);
+
+repositoryRoutes.get(
+  "/groups/:groupSlug/projects/:projectSlug/repository/tags",
+  loadProject,
+  async (c) => {
+    assertRole(c, "reporter");
+    const project = c.get("project");
+    if (project.provisioningState !== "ready") {
+      return c.json({ tags: [] });
+    }
+    const tags = await getTags(c.get("db"), getGitStorage(c.env), project);
+    return c.json({ tags });
   }
 );
 
@@ -300,6 +315,8 @@ repositoryRoutes.post(
               "# Changelog\n\n## Unreleased\n\n- Add a friendlier greeting\n",
             "src/index.ts": `export function hello(name: string): string {\n  return \`Hello, \${name}! Welcome.\`;\n}\n\nexport function farewell(name: string): string {\n  return \`Goodbye, \${name}.\`;\n}\n\nconsole.log(hello("world"));\n`,
           };
+    const seedTag =
+      branch === project.defaultBranch && !branchExists ? "v0.1.0" : undefined;
     const seed = fake.seedCommit(project.artifactsRepoName, {
       branch,
       parentSha: branchExists ? undefined : baseSha,
@@ -310,6 +327,7 @@ repositoryRoutes.post(
           : "Add friendlier greeting and changelog",
       timestamp,
       files: featureFiles,
+      tag: seedTag,
     });
 
     await upsertCommits(db, project.id, [toCommitInput(seed)]);
@@ -332,6 +350,27 @@ repositoryRoutes.post(
           updatedAt: new Date(),
         },
       });
+    if (seedTag) {
+      await db
+        .insert(gitRefs)
+        .values({
+          projectId: project.id,
+          refName: `refs/tags/${seedTag}`,
+          refType: "tag",
+          sha: seed.hash,
+          lastEventAt: new Date(),
+          deletedAt: null,
+        })
+        .onConflictDoUpdate({
+          target: [gitRefs.projectId, gitRefs.refName],
+          set: {
+            sha: seed.hash,
+            deletedAt: null,
+            lastEventAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+    }
     await updateOpenMrsForSourcePush(db, project.id, branch, seed.hash);
     await db
       .update(projects)

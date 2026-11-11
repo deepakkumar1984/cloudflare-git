@@ -29,11 +29,13 @@ import { ProjectSettingsPage } from "@/pages/ProjectSettingsPage";
 import { RepositoryBlobPage } from "@/pages/RepositoryBlobPage";
 import { RepositoryCommitPage } from "@/pages/RepositoryCommitPage";
 import { RepositoryCommitsPage } from "@/pages/RepositoryCommitsPage";
+import { ReleasesPage } from "@/pages/ReleasesPage";
 import { RepositoryPage } from "@/pages/RepositoryPage";
 import { SearchPage } from "@/pages/SearchPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SignInPage } from "@/pages/SignInPage";
 import { SignUpPage } from "@/pages/SignUpPage";
+import { TodosPage } from "@/pages/TodosPage";
 
 function AuthLoading() {
   const appName = useAppName();
@@ -117,6 +119,7 @@ export function App() {
               <Route path="boards" element={<BoardPage />} />
               <Route path="labels" element={<LabelsPage />} />
               <Route path="milestones" element={<MilestonesPage />} />
+              <Route path="releases" element={<ReleasesPage />} />
               <Route path="merge_requests" element={<MergeRequestsPage />} />
               <Route
                 path="merge_requests/new"
@@ -131,6 +134,7 @@ export function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Route>
             <Route path="search" element={<SearchPage />} />
+            <Route path="todos" element={<TodosPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

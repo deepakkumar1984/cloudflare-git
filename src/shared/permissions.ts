@@ -86,6 +86,10 @@ export function canManageBoard(role: Role | null): boolean {
   return atLeast(role, "maintainer");
 }
 
+export function canManageReleases(role: Role | null): boolean {
+  return atLeast(role, "maintainer");
+}
+
 export function canManageProjectSettings(role: Role | null): boolean {
   return atLeast(role, "maintainer");
 }

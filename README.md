@@ -17,6 +17,8 @@ namespace, app name, and public URL are chosen when you run `npm run setup`.
   through the app's own custom domain via a streaming Git proxy
 - Issues, comments, markdown checklists, labels, milestones
 - Label-backed issue boards with drag-and-drop moves
+- Tag browser and releases: markdown release notes attached to synced Git tags
+- To-do list with an unread badge: assignments, review requests, and @mentions
 - Merge requests: create, review, approve/request changes, discussions,
   changed-file metadata, lazy per-file diffs, commit list
 - Merge detection after pushes (fast-forward, merge commit, squash/rebase
@@ -191,6 +193,32 @@ Open a group and choose **Import repo**, or visit
   for local/E2E demos. It lists fixed demo repositories and accepts any token of
   at least eight characters.
 
+### Tags and releases
+
+Open a project and choose **Releases** (or **Repository → Tags**).
+
+- **Tags** lists every synced Git tag with its tagged commit. Annotated tags
+  (`git tag -a`) are peeled to their commit automatically. Push tags with
+  `git push origin <tag>` (or `--tags`); on a deployed Worker the push event
+  syncs them, and locally the repository **Refresh** action does.
+- **Releases** attach a title and markdown notes to an existing tag. Publishing,
+  editing, and deleting releases requires maintainer access; browsing them only
+  requires project visibility. Browsing tags requires reporter access.
+- A tag can have at most one release. Deleting a release removes the notes but
+  never touches the Git tag. Release activity appears in the project and
+  dashboard feeds.
+- There is no server-side tag creation: tags come from your Git client, matching
+  the app's no-server-side-merge model.
+
+### To-dos
+
+The bell in the sidebar (and mobile header) shows your pending to-do count.
+Open **To do** to see them. A to-do is created when someone assigns you an issue
+or merge request, requests your review, or @mentions you in a comment. You can
+mark one done, restore it, or mark all done. To-dos respect project visibility
+and confidential-issue access, and never notify you about your own actions.
+There is no email delivery in this milestone; to-dos are in-app only.
+
 ### Custom domain and clone URLs
 
 Leave the custom domain blank in setup to serve the Worker on
@@ -355,13 +383,13 @@ so do not share a namespace between environments.
 Effective project role is the maximum of direct project membership, inherited
 group membership, and admin bypass.
 
-| Action                                                      | Minimum role |
-| ----------------------------------------------------------- | ------------ |
-| View project, issues, MRs, comment                          | guest        |
-| Clone / mint read token, create issue, move board card      | reporter     |
-| Push / write token, create MR, review/approve               | developer    |
-| Manage labels, milestones, boards, settings, mark MR merged | maintainer   |
-| Manage members, archive project/group, change visibility    | owner        |
+| Action                                                                | Minimum role |
+| --------------------------------------------------------------------- | ------------ |
+| View project, issues, MRs, comment                                    | guest        |
+| Clone / mint read token, create issue, move board card                | reporter     |
+| Push / write token, create MR, review/approve                         | developer    |
+| Manage labels, milestones, boards, releases, settings, mark MR merged | maintainer   |
+| Manage members, archive project/group, change visibility              | owner        |
 
 Private projects are invisible without a role. Internal projects are visible to
 authenticated users. Confidential issues require reporter access or higher.

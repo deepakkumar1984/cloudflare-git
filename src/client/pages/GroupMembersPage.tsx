@@ -122,7 +122,7 @@ export function GroupMembersPage() {
       ) : null}
 
       <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
-        <div className="grid grid-cols-[minmax(0,1fr)_130px_110px] gap-3 border-b border-line bg-canvas/50 px-5 py-2.5 font-mono text-[10px] uppercase tracking-[0.1em] text-faint sm:grid-cols-[minmax(0,1fr)_160px_120px]">
+        <div className="grid grid-cols-[minmax(0,1fr)_130px_110px] gap-3 border-b border-line bg-canvas/50 px-5 py-2.5 font-mono text-[11px] text-faint sm:grid-cols-[minmax(0,1fr)_160px_120px]">
           <span>Member</span>
           <span>Role</span>
           <span className="text-right">Actions</span>

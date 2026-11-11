@@ -129,9 +129,7 @@ export function NewIssuePage() {
 
           <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
             <div className="flex items-center justify-between border-b border-line px-4 py-2">
-              <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
-                Description
-              </span>
+              <span className="mono-label">Description</span>
               <div className="flex rounded-md border border-line bg-canvas p-0.5">
                 <button
                   type="button"
