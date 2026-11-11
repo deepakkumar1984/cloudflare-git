@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { api, errorMessage } from "@/lib/api";
 import { useMe, useProjectMembers } from "@/lib/queries";
 import type { Role } from "@shared/constants";
@@ -23,6 +24,7 @@ import { ROLE_LABELS, ROLES } from "@shared/constants";
 import { roleTone } from "@/lib/utils";
 
 export function ProjectMembersPage() {
+  const confirm = useConfirm();
   const { groupSlug = "", projectSlug = "" } = useParams();
   const membersQuery = useProjectMembers(groupSlug, projectSlug);
   const me = useMe();
@@ -193,13 +195,15 @@ export function ProjectMembersPage() {
                         size="icon-sm"
                         aria-label={`Remove ${member.user.name}`}
                         onClick={() => {
-                          if (
-                            window.confirm(
-                              `Remove the direct project membership for ${member.user.name}?`
-                            )
-                          ) {
-                            removeMember.mutate(member.user.id);
-                          }
+                          void confirm({
+                            title: `Remove ${member.user.name}?`,
+                            description:
+                              "This removes their direct project membership. Access inherited from the group stays.",
+                            confirmLabel: "Remove member",
+                            tone: "danger",
+                          }).then((accepted) => {
+                            if (accepted) removeMember.mutate(member.user.id);
+                          });
                         }}
                       >
                         <Trash2 className="size-3.5" />

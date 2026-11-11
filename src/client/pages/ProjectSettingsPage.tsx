@@ -7,10 +7,12 @@ import {
   Loader2,
   RefreshCw,
   ShieldAlert,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +27,8 @@ import { useProjectContext } from "./ProjectLayout";
 
 export function ProjectSettingsPage() {
   const { groupSlug = "", projectSlug = "" } = useParams();
+  const navigate = useNavigate();
+  const confirm = useConfirm();
   const data = useProjectContext();
   const queryClient = useQueryClient();
   const project = data.project;
@@ -84,6 +88,17 @@ export function ProjectSettingsPage() {
     onSuccess: async () => {
       toast.success("Project archived");
       await refresh();
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  });
+
+  const remove = useMutation({
+    mutationFn: () =>
+      api.delete(`/groups/${groupSlug}/projects/${projectSlug}`),
+    onSuccess: async () => {
+      toast.success("Project deleted");
+      await queryClient.invalidateQueries({ queryKey: ["group", groupSlug] });
+      navigate(`/groups/${groupSlug}`);
     },
     onError: (error) => toast.error(errorMessage(error)),
   });
@@ -391,13 +406,15 @@ export function ProjectSettingsPage() {
                   !projectImport.data?.canReimport
                 }
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      "Re-import this repository? Local branches and open merge requests will be replaced, and the Git remote will change."
-                    )
-                  ) {
-                    reimport.mutate();
-                  }
+                  void confirm({
+                    title: "Re-import this repository?",
+                    description:
+                      "This replaces the repository with a fresh copy, closes open merge requests, revokes clone credentials, and changes the Git remote. Re-clone after it finishes.",
+                    confirmLabel: "Re-import",
+                    tone: "danger",
+                  }).then((accepted) => {
+                    if (accepted) reimport.mutate();
+                  });
                 }}
               >
                 {reimport.isPending ? (
@@ -432,13 +449,15 @@ export function ProjectSettingsPage() {
               className="shrink-0"
               disabled={refreshRefs.isPending}
               onClick={() => {
-                if (
-                  window.confirm(
-                    "Refresh refs from Artifacts? The cached branch and tag list will be rewritten. Missing refs are marked deleted, and open merge requests may change state."
-                  )
-                ) {
-                  refreshRefs.mutate();
-                }
+                void confirm({
+                  title: "Refresh refs from Artifacts?",
+                  description:
+                    "The cached branch and tag list is rewritten. Missing refs are marked deleted, and open merge requests may change state.",
+                  confirmLabel: "Refresh refs",
+                  tone: "danger",
+                }).then((accepted) => {
+                  if (accepted) refreshRefs.mutate();
+                });
               }}
             >
               {refreshRefs.isPending ? (
@@ -478,13 +497,15 @@ export function ProjectSettingsPage() {
             <Button
               variant="danger"
               onClick={() => {
-                if (
-                  window.confirm(
-                    "Archive this project? It will become read-only."
-                  )
-                ) {
-                  archive.mutate();
-                }
+                void confirm({
+                  title: "Archive this project?",
+                  description:
+                    "The project becomes read-only. The Git repository and collaboration data stay.",
+                  confirmLabel: "Archive project",
+                  tone: "danger",
+                }).then((accepted) => {
+                  if (accepted) archive.mutate();
+                });
               }}
               disabled={archive.isPending}
             >
@@ -498,6 +519,44 @@ export function ProjectSettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {data.canArchive ? (
+        <Card className="border-red/30">
+          <CardHeader>
+            <CardTitle className="text-red">Delete project</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <p className="text-[13px] leading-6 text-muted">
+              Permanently deletes this project, its issues and merge requests,
+              and the Git repository. Clone credentials stop working.
+            </p>
+            <Button
+              variant="danger"
+              className="shrink-0"
+              disabled={remove.isPending}
+              onClick={() => {
+                void confirm({
+                  title: `Delete ${project.name}?`,
+                  description:
+                    "This cannot be undone. The project path and the Git history stored here are removed.",
+                  confirmLabel: "Delete project",
+                  tone: "danger",
+                  match: project.slug,
+                }).then((accepted) => {
+                  if (accepted) remove.mutate();
+                });
+              }}
+            >
+              {remove.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              Delete project
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

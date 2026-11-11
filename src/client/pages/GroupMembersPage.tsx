@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { api, errorMessage } from "@/lib/api";
 import { useGroup, useGroupMembers } from "@/lib/queries";
 import type { Role } from "@shared/constants";
@@ -24,6 +25,7 @@ import { roleTone } from "@/lib/utils";
 import { useMe } from "@/lib/queries";
 
 export function GroupMembersPage() {
+  const confirm = useConfirm();
   const { groupSlug = "" } = useParams();
   const groupQuery = useGroup(groupSlug);
   const membersQuery = useGroupMembers(groupSlug);
@@ -197,13 +199,14 @@ export function GroupMembersPage() {
                         size="icon-sm"
                         aria-label={`Remove ${member.user.name}`}
                         onClick={() => {
-                          if (
-                            window.confirm(
-                              `Remove ${member.user.name} from this group?`
-                            )
-                          ) {
-                            removeMember.mutate(member.user.id);
-                          }
+                          void confirm({
+                            title: `Remove ${member.user.name}?`,
+                            description: `${member.user.name} will lose access through this group. Direct project memberships stay.`,
+                            confirmLabel: "Remove member",
+                            tone: "danger",
+                          }).then((accepted) => {
+                            if (accepted) removeMember.mutate(member.user.id);
+                          });
                         }}
                       >
                         <Trash2 className="size-3.5" />

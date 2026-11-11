@@ -3,6 +3,7 @@ import type { Database } from "@db/client";
 import {
   boardLists,
   boards,
+  groups,
   labels,
   projectCounters,
   projectMembers,
@@ -20,6 +21,7 @@ import {
 import type { GitStorage } from "@worker/artifacts";
 import { isArtifactsErrorCode } from "@worker/artifacts/types";
 import { recordEvent } from "./events";
+import { revokeProjectTokens } from "./git-tokens";
 
 export function newArtifactsRepoName(): string {
   return `p-${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
@@ -176,6 +178,44 @@ export async function provisionProject(
     .where(eq(projects.id, project.id))
     .returning();
   return ready ?? project;
+}
+
+async function removeRepository(
+  storage: GitStorage,
+  repoName: string
+): Promise<void> {
+  await storage.deleteRepository(repoName).catch(() => false);
+}
+
+/** Removes the Git repository and every row that belongs to the project. */
+export async function deleteStoredProject(
+  db: Database,
+  storage: GitStorage,
+  project: Pick<Project, "id" | "artifactsRepoName">
+): Promise<void> {
+  await revokeProjectTokens(db, storage, project);
+  await removeRepository(storage, project.artifactsRepoName);
+  await db.delete(projects).where(eq(projects.id, project.id));
+}
+
+/** Removes every project in the group, then the group itself. */
+export async function deleteStoredGroup(
+  db: Database,
+  storage: GitStorage,
+  groupId: string
+): Promise<void> {
+  const rows = await db
+    .select({
+      id: projects.id,
+      artifactsRepoName: projects.artifactsRepoName,
+    })
+    .from(projects)
+    .where(eq(projects.groupId, groupId));
+  for (const project of rows) {
+    await revokeProjectTokens(db, storage, project);
+    await removeRepository(storage, project.artifactsRepoName);
+  }
+  await db.delete(groups).where(eq(groups.id, groupId));
 }
 
 export function projectVisibilityAllowed(

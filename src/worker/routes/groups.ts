@@ -26,6 +26,7 @@ import {
 } from "@worker/services/git-tokens";
 import {
   createProject,
+  deleteStoredGroup,
   projectVisibilityAllowed,
 } from "@worker/services/projects";
 import {
@@ -267,6 +268,23 @@ groupRoutes.post("/groups/:groupSlug/archive", loadGroup, async (c) => {
     targetId: group.id,
   });
   return c.json({ group: groupSummary(updated ?? group, c.get("groupRole")) });
+});
+
+groupRoutes.delete("/groups/:groupSlug", loadGroup, async (c) => {
+  const session = assertAuthenticated(c);
+  const group = c.get("group");
+  assertGroupRole(c, "owner");
+  if (group.personal) throw conflict("Personal groups cannot be deleted");
+  const db = c.get("db");
+  const detail = { slug: group.slug, name: group.name };
+  await deleteStoredGroup(db, getGitStorage(c.env), group.id);
+  await recordAudit(db, {
+    actorId: session.user.id,
+    action: "group.deleted",
+    detail,
+    ipAddress: c.req.header("cf-connecting-ip"),
+  });
+  return c.body(null, 204);
 });
 
 groupRoutes.post("/groups/:groupSlug/unarchive", loadGroup, async (c) => {

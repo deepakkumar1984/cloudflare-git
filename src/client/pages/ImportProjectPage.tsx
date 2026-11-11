@@ -17,6 +17,7 @@ import {
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -94,6 +95,7 @@ function parseImportUrl(value: string): ParsedImportUrl | null {
 }
 
 export function ImportProjectPage() {
+  const confirm = useConfirm();
   const { groupSlug = "" } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -591,13 +593,15 @@ export function ImportProjectPage() {
                 size="sm"
                 disabled={disconnect.isPending}
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      `Disconnect ${GIT_PROVIDER_LABELS[provider]}? Existing imports are not affected.`
-                    )
-                  ) {
-                    disconnect.mutate();
-                  }
+                  void confirm({
+                    title: `Disconnect ${GIT_PROVIDER_LABELS[provider]}?`,
+                    description:
+                      "The saved token is removed. Repositories already imported stay as they are.",
+                    confirmLabel: "Disconnect",
+                    tone: "danger",
+                  }).then((accepted) => {
+                    if (accepted) disconnect.mutate();
+                  });
                 }}
               >
                 {disconnect.isPending ? (

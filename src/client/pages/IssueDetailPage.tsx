@@ -16,6 +16,7 @@ import {
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Markdown } from "@/components/Markdown";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,7 @@ function SidebarSection({
 }
 
 export function IssueDetailPage() {
+  const confirm = useConfirm();
   const { groupSlug = "", projectSlug = "", iid = "" } = useParams();
   const issueNumber = Number(iid);
   const context = useProjectContext();
@@ -369,9 +371,14 @@ export function IssueDetailPage() {
                       className="ml-auto"
                       aria-label="Delete comment"
                       onClick={() => {
-                        if (window.confirm("Delete this comment?")) {
-                          deleteNote.mutate(note.id);
-                        }
+                        void confirm({
+                          title: "Delete this comment?",
+                          description: "The comment is removed from the issue.",
+                          confirmLabel: "Delete comment",
+                          tone: "danger",
+                        }).then((accepted) => {
+                          if (accepted) deleteNote.mutate(note.id);
+                        });
                       }}
                       disabled={!viewerCanDelete(note.author.id)}
                     >

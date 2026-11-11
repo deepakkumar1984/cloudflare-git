@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { authClient } from "@/lib/auth";
 import { useAppName } from "@/lib/meta";
 import { BoardPage } from "@/pages/BoardPage";
@@ -68,71 +69,73 @@ function RequireAuth() {
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/sign-in" element={<SignInPage />} />
-      <Route path="/sign-up" element={<SignUpPage />} />
+    <ConfirmProvider>
+      <Routes>
+        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
 
-      <Route element={<RequireAuth />}>
-        <Route element={<AppShell />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="groups" element={<GroupsPage />} />
-          <Route path="groups/new" element={<NewGroupPage />} />
-          <Route path="groups/:groupSlug" element={<GroupPage />} />
-          <Route
-            path="groups/:groupSlug/members"
-            element={<GroupMembersPage />}
-          />
-          <Route
-            path="groups/:groupSlug/settings"
-            element={<GroupSettingsPage />}
-          />
-          <Route
-            path="groups/:groupSlug/projects/new"
-            element={<NewProjectPage />}
-          />
-          <Route
-            path="groups/:groupSlug/projects/import"
-            element={<ImportProjectPage />}
-          />
-          <Route
-            path="groups/:groupSlug/:projectSlug"
-            element={<ProjectLayout />}
-          >
-            <Route index element={<ProjectOverviewPage />} />
-            <Route path="repository" element={<RepositoryPage />} />
-            <Route path="repository/blob" element={<RepositoryBlobPage />} />
+        <Route element={<RequireAuth />}>
+          <Route element={<AppShell />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="groups" element={<GroupsPage />} />
+            <Route path="groups/new" element={<NewGroupPage />} />
+            <Route path="groups/:groupSlug" element={<GroupPage />} />
             <Route
-              path="repository/commits"
-              element={<RepositoryCommitsPage />}
+              path="groups/:groupSlug/members"
+              element={<GroupMembersPage />}
             />
             <Route
-              path="repository/commits/:sha"
-              element={<RepositoryCommitPage />}
-            />
-            <Route path="issues" element={<IssuesPage />} />
-            <Route path="issues/new" element={<NewIssuePage />} />
-            <Route path="issues/:iid" element={<IssueDetailPage />} />
-            <Route path="boards" element={<BoardPage />} />
-            <Route path="labels" element={<LabelsPage />} />
-            <Route path="milestones" element={<MilestonesPage />} />
-            <Route path="merge_requests" element={<MergeRequestsPage />} />
-            <Route
-              path="merge_requests/new"
-              element={<NewMergeRequestPage />}
+              path="groups/:groupSlug/settings"
+              element={<GroupSettingsPage />}
             />
             <Route
-              path="merge_requests/:iid"
-              element={<MergeRequestDetailPage />}
+              path="groups/:groupSlug/projects/new"
+              element={<NewProjectPage />}
             />
-            <Route path="members" element={<ProjectMembersPage />} />
-            <Route path="settings" element={<ProjectSettingsPage />} />
+            <Route
+              path="groups/:groupSlug/projects/import"
+              element={<ImportProjectPage />}
+            />
+            <Route
+              path="groups/:groupSlug/:projectSlug"
+              element={<ProjectLayout />}
+            >
+              <Route index element={<ProjectOverviewPage />} />
+              <Route path="repository" element={<RepositoryPage />} />
+              <Route path="repository/blob" element={<RepositoryBlobPage />} />
+              <Route
+                path="repository/commits"
+                element={<RepositoryCommitsPage />}
+              />
+              <Route
+                path="repository/commits/:sha"
+                element={<RepositoryCommitPage />}
+              />
+              <Route path="issues" element={<IssuesPage />} />
+              <Route path="issues/new" element={<NewIssuePage />} />
+              <Route path="issues/:iid" element={<IssueDetailPage />} />
+              <Route path="boards" element={<BoardPage />} />
+              <Route path="labels" element={<LabelsPage />} />
+              <Route path="milestones" element={<MilestonesPage />} />
+              <Route path="merge_requests" element={<MergeRequestsPage />} />
+              <Route
+                path="merge_requests/new"
+                element={<NewMergeRequestPage />}
+              />
+              <Route
+                path="merge_requests/:iid"
+                element={<MergeRequestDetailPage />}
+              />
+              <Route path="members" element={<ProjectMembersPage />} />
+              <Route path="settings" element={<ProjectSettingsPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+            <Route path="search" element={<SearchPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
-          <Route path="search" element={<SearchPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<NotFoundPage />} />
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </ConfirmProvider>
   );
 }

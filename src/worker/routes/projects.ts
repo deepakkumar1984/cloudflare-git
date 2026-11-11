@@ -52,6 +52,7 @@ import {
   resolveAppOrigin,
 } from "@worker/services/public-remote";
 import {
+  deleteStoredProject,
   projectVisibilityAllowed,
   provisionProject,
 } from "@worker/services/projects";
@@ -329,6 +330,32 @@ projectRoutes.post(
     return c.json({
       project: projectSummary(updated ?? project, c.get("role")),
     });
+  }
+);
+
+projectRoutes.delete(
+  "/groups/:groupSlug/projects/:projectSlug",
+  loadProject,
+  async (c) => {
+    const session = assertAuthenticated(c);
+    const project = c.get("project");
+    const group = c.get("group");
+    assertRole(c, "owner");
+    const db = c.get("db");
+    const detail = {
+      slug: project.slug,
+      name: project.name,
+      groupSlug: group.slug,
+      repoName: project.artifactsRepoName,
+    };
+    await deleteStoredProject(db, getGitStorage(c.env), project);
+    await recordAudit(db, {
+      actorId: session.user.id,
+      action: "project.deleted",
+      detail,
+      ipAddress: c.req.header("cf-connecting-ip"),
+    });
+    return c.body(null, 204);
   }
 );
 

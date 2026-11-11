@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { api, errorMessage } from "@/lib/api";
 import { useLabels } from "@/lib/queries";
 import type { ProjectLabel } from "@/lib/types";
@@ -23,6 +24,7 @@ import { canManageLabels } from "@shared/permissions";
 import { useProjectContext } from "./ProjectLayout";
 
 export function LabelsPage() {
+  const confirm = useConfirm();
   const { groupSlug = "", projectSlug = "" } = useParams();
   const context = useProjectContext();
   const queryClient = useQueryClient();
@@ -163,13 +165,15 @@ export function LabelsPage() {
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => {
-                        if (
-                          window.confirm(
-                            `Delete "${label.title}"? It will be removed from issues and board columns.`
-                          )
-                        ) {
-                          remove.mutate(label.id);
-                        }
+                        void confirm({
+                          title: `Delete ${label.title}?`,
+                          description:
+                            "The label is removed from issues and from board columns.",
+                          confirmLabel: "Delete label",
+                          tone: "danger",
+                        }).then((accepted) => {
+                          if (accepted) remove.mutate(label.id);
+                        });
                       }}
                       aria-label={`Delete ${label.title}`}
                     >

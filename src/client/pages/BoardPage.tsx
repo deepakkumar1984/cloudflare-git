@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { api, errorMessage } from "@/lib/api";
 import { useBoard, useLabels } from "@/lib/queries";
 import type { BoardIssue, BoardList } from "@/lib/types";
@@ -96,6 +97,7 @@ function Card({
 }
 
 export function BoardPage() {
+  const confirm = useConfirm();
   const { groupSlug = "", projectSlug = "" } = useParams();
   const context = useProjectContext();
   const queryClient = useQueryClient();
@@ -251,9 +253,15 @@ export function BoardPage() {
                     size="icon-sm"
                     aria-label={`Remove ${list.name} column`}
                     onClick={() => {
-                      if (window.confirm(`Remove the "${list.name}" column?`)) {
-                        removeColumn.mutate(list.id);
-                      }
+                      void confirm({
+                        title: `Remove the ${list.name} column?`,
+                        description:
+                          "Issues stay in the project. They leave this column.",
+                        confirmLabel: "Remove column",
+                        tone: "danger",
+                      }).then((accepted) => {
+                        if (accepted) removeColumn.mutate(list.id);
+                      });
                     }}
                   >
                     <Trash2 className="size-3" />

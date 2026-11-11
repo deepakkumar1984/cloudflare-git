@@ -23,6 +23,7 @@ import {
 import { useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Markdown } from "@/components/Markdown";
 import { useAppName } from "@/lib/meta";
 import { Avatar } from "@/components/ui/avatar";
@@ -214,6 +215,7 @@ function FilePatchView({ patch }: { patch: MergeRequestFilePatch }) {
 }
 
 export function MergeRequestDetailPage() {
+  const confirm = useConfirm();
   const { groupSlug = "", projectSlug = "", iid = "" } = useParams();
   const iidNumber = Number(iid);
   const context = useProjectContext();
@@ -590,9 +592,15 @@ export function MergeRequestDetailPage() {
                               )
                             }
                             onClick={() => {
-                              if (window.confirm("Delete this comment?")) {
-                                deleteNote.mutate(note.id);
-                              }
+                              void confirm({
+                                title: "Delete this comment?",
+                                description:
+                                  "The comment is removed from the merge request.",
+                                confirmLabel: "Delete comment",
+                                tone: "danger",
+                              }).then((accepted) => {
+                                if (accepted) deleteNote.mutate(note.id);
+                              });
                             }}
                           >
                             <Trash2 className="size-3.5" />
@@ -977,13 +985,14 @@ export function MergeRequestDetailPage() {
                   className="flex-1"
                   disabled={markMerged.isPending}
                   onClick={() => {
-                    if (
-                      window.confirm(
-                        "Mark this merge request as merged? Use this only after the change has been merged and pushed locally."
-                      )
-                    ) {
-                      markMerged.mutate();
-                    }
+                    void confirm({
+                      title: "Mark this merge request as merged?",
+                      description:
+                        "Use this after the change has been merged and pushed locally. The app does not merge the branches itself.",
+                      confirmLabel: "Mark merged",
+                    }).then((accepted) => {
+                      if (accepted) markMerged.mutate();
+                    });
                   }}
                 >
                   {markMerged.isPending ? (

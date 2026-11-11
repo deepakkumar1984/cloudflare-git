@@ -75,13 +75,13 @@ export function NewGroupPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="group-slug">Path</Label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[12px] text-faint">
+              <div className="flex h-9 w-full items-center rounded-md border border-line bg-surface px-3 shadow-sm transition-colors hover:border-line-strong focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+                <span className="shrink-0 font-mono text-[12px] text-faint">
                   /groups/
                 </span>
-                <Input
+                <input
                   id="group-slug"
                   required
                   value={slug}
@@ -89,7 +89,7 @@ export function NewGroupPage() {
                     setSlugTouched(true);
                     setSlug(slugPreview(event.target.value));
                   }}
-                  className="pl-[62px] font-mono text-[13px]"
+                  className="min-w-0 flex-1 bg-transparent font-mono text-[13px] text-ink outline-none placeholder:text-faint"
                   placeholder="platform"
                   pattern="[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
                 />

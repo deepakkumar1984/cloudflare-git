@@ -453,5 +453,71 @@ describe("API flow", () => {
       { cookie: outsiderCookie }
     );
     expect(outsiderView.status).toBe(404);
+
+    const personal = (
+      me.json!.groups as Array<{ slug: string; personal: boolean }>
+    ).find((item) => item.personal);
+    expect(personal).toBeTruthy();
+    const deletePersonal = await call(`/api/v1/groups/${personal!.slug}`, {
+      method: "DELETE",
+      cookie: ownerCookie,
+    });
+    expect(deletePersonal.status).toBe(409);
+
+    const doomed = await call("/api/v1/groups/api-group/projects", {
+      method: "POST",
+      cookie: ownerCookie,
+      body: { slug: "doomed", name: "Doomed", visibility: "private" },
+    });
+    expect(doomed.status).toBe(201);
+    const addDeveloper = await call(
+      "/api/v1/groups/api-group/projects/doomed/members",
+      {
+        method: "POST",
+        cookie: ownerCookie,
+        body: { identifier: "reviewerapi", role: "developer" },
+      }
+    );
+    expect(addDeveloper.status).toBe(201);
+    const developerDelete = await call(
+      "/api/v1/groups/api-group/projects/doomed",
+      { method: "DELETE", cookie: reviewerCookie }
+    );
+    expect(developerDelete.status).toBe(403);
+    const ownerDelete = await call("/api/v1/groups/api-group/projects/doomed", {
+      method: "DELETE",
+      cookie: ownerCookie,
+    });
+    expect(ownerDelete.status).toBe(204);
+    const projectGone = await call("/api/v1/groups/api-group/projects/doomed", {
+      cookie: ownerCookie,
+    });
+    expect(projectGone.status).toBe(404);
+
+    const extraGroup = await call("/api/v1/groups", {
+      method: "POST",
+      cookie: ownerCookie,
+      body: {
+        slug: "doomed-group",
+        name: "Doomed group",
+        visibility: "private",
+      },
+    });
+    expect(extraGroup.status).toBe(201);
+    const nested = await call("/api/v1/groups/doomed-group/projects", {
+      method: "POST",
+      cookie: ownerCookie,
+      body: { slug: "nested", name: "Nested", visibility: "private" },
+    });
+    expect(nested.status).toBe(201);
+    const deleteGroup = await call("/api/v1/groups/doomed-group", {
+      method: "DELETE",
+      cookie: ownerCookie,
+    });
+    expect(deleteGroup.status).toBe(204);
+    const groupGone = await call("/api/v1/groups/doomed-group", {
+      cookie: ownerCookie,
+    });
+    expect(groupGone.status).toBe(404);
   });
 });

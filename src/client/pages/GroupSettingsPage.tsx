@@ -5,10 +5,12 @@ import {
   Loader2,
   Lock,
   ShieldAlert,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +23,8 @@ import { cn } from "@/lib/utils";
 
 export function GroupSettingsPage() {
   const { groupSlug = "" } = useParams();
+  const navigate = useNavigate();
+  const confirm = useConfirm();
   const groupQuery = useGroup(groupSlug);
   const queryClient = useQueryClient();
   const group = groupQuery.data?.group;
@@ -68,6 +72,16 @@ export function GroupSettingsPage() {
     onSuccess: async () => {
       toast.success("Group restored");
       await refresh();
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => api.delete(`/groups/${groupSlug}`),
+    onSuccess: async () => {
+      toast.success("Group deleted");
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      navigate("/groups");
     },
     onError: (error) => toast.error(errorMessage(error)),
   });
@@ -228,13 +242,15 @@ export function GroupSettingsPage() {
               <Button
                 variant="danger"
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      "Archive this group? Projects will become read-only."
-                    )
-                  ) {
-                    archive.mutate();
-                  }
+                  void confirm({
+                    title: "Archive this group?",
+                    description:
+                      "Projects in this group become read-only. Nothing is deleted.",
+                    confirmLabel: "Archive group",
+                    tone: "danger",
+                  }).then((accepted) => {
+                    if (accepted) archive.mutate();
+                  });
                 }}
                 disabled={archive.isPending}
               >
@@ -253,9 +269,48 @@ export function GroupSettingsPage() {
           <Badge tone="outline" className="mr-2">
             Personal
           </Badge>
-          Your personal group cannot be archived or shared with other members.
+          Your personal group cannot be archived, deleted, or shared.
         </div>
       )}
+
+      {!group.personal ? (
+        <Card className="border-red/30">
+          <CardHeader>
+            <CardTitle className="text-red">Delete group</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <p className="text-[13px] leading-6 text-muted">
+              Permanently deletes this group, every project in it, and the Git
+              repositories. Issues, merge requests, and credentials go with
+              them.
+            </p>
+            <Button
+              variant="danger"
+              className="shrink-0"
+              disabled={remove.isPending}
+              onClick={() => {
+                void confirm({
+                  title: `Delete ${group.name}?`,
+                  description:
+                    "This cannot be undone. The group path, projects, and Git history stored here are removed.",
+                  confirmLabel: "Delete group",
+                  tone: "danger",
+                  match: group.slug,
+                }).then((accepted) => {
+                  if (accepted) remove.mutate();
+                });
+              }}
+            >
+              {remove.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              Delete group
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
